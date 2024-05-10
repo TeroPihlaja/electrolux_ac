@@ -1,0 +1,2 @@
+DOMAIN = "electrolux_ac"
+TARGET_TEMPERATURE_STEP = 1

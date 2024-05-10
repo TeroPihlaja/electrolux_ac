@@ -1,0 +1,13 @@
+{
+  "domain": "electrolux_ac",
+  "name": "Electrolux AC control",
+  "codeowners": ["@TeroPihlaja"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "",
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "",
+  "requirements": ["pyelectroluxocp==0.0.18"],
+  "version": "v0.1.0"
+}
