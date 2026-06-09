@@ -27,7 +27,6 @@ from .const import (
   TARGET_TEMPERATURE_STEP
 )
 
-import asyncio
 import logging
 
 SWING_MODES = [SWING_OFF, SWING_VERTICAL]
