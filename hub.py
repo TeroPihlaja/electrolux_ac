@@ -26,11 +26,6 @@ class Hub:
         self.appliances = None
         self.online = False
 
-        asyncio.ensure_future(self.discover_appliances())
-
-        # self._loop = asyncio.get_event_loop()
-        # self._loop.create_task(self.update_loop())
-
     @property
     def hub_id(self) -> str:
         """ID for dummy hub."""
