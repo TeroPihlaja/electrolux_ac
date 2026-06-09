@@ -113,13 +113,13 @@ class Appliance:
       self._following_changes = True
 
     def state_update_callback(self, data):
-      _LOGGER.info("appliance state updated: %s", json.dumps((data)))
-
-      for key, value in data[self._id].items():
-        self._states[key] = value
-
-      _LOGGER.debug("current state: %s", self._states)
-      self.publish_updates()
+        _LOGGER.info("appliance state updated: %s", json.dumps(data))
+        if self._id not in data:
+            return
+        for key, value in data[self._id].items():
+            self._states[key] = value
+        _LOGGER.debug("current state: %s", self._states)
+        self.publish_updates()
 
     async def update_appliance_info(self):
       info = await self.hub._client.get_appliances_info([self._id])
