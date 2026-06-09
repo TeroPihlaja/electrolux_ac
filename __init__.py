@@ -7,7 +7,6 @@ from homeassistant.core import HomeAssistant
 from . import hub
 from .const import DOMAIN
 import aiohttp
-import asyncio
 
 import logging
 
@@ -23,8 +22,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except aiohttp.client_exceptions.ClientResponseError as ex:
         _LOGGER.error("Error connecting to Electrolux OCP: %s", ex)
         await hass.data[DOMAIN][entry.entry_id].disconnect()
-        await asyncio.sleep(60)
-        raise ConfigEntryNotReady("Error connecting to Electrolux OCP: %s", ex) from ex
+        raise ConfigEntryNotReady("Error connecting to Electrolux OCP: %s" % ex) from ex
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
