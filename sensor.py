@@ -2,7 +2,11 @@
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import (
+    UnitOfTemperature,
+    UnitOfTime,
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+)
 
 from .const import DOMAIN
 import logging
@@ -69,6 +73,31 @@ class SensorBase(SensorEntity):
   async def async_will_remove_from_hass(self):
     """Entity being removed from hass."""
     self._appliance.remove_callback(self.async_write_ha_state)
+
+
+class GenericSensor(SensorBase):
+  """Sensor that reads a single key from appliance state, with dot-notation nested access."""
+
+  def __init__(self, appliance, state_key, name_suffix, unique_id_suffix,
+               device_class, native_unit, state_class):
+    super().__init__(appliance)
+    self._state_key = state_key
+    self._attr_unique_id = f"{appliance.appliance_id}_{unique_id_suffix}"
+    self._attr_name = f"{appliance.name} {name_suffix}"
+    self._attr_device_class = device_class
+    self._attr_native_unit_of_measurement = native_unit
+    self._attr_state_class = state_class
+
+  @property
+  def native_value(self):
+    value = self._appliance._states
+    for part in self._state_key.split('.'):
+      if not isinstance(value, dict):
+        return None
+      value = value.get(part)
+      if value is None:
+        return None
+    return value
 
 
 class TemperatureSensor(SensorBase):
