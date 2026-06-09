@@ -227,7 +227,7 @@ class ElectroluxClimate(ClimateEntity):
       await self._appliance.execute_command("verticalSwing", "off")
     elif swing_mode == SWING_VERTICAL:
       await self._appliance.execute_command("verticalSwing", "on")
-    self.async_write_ha_state
+    self.async_write_ha_state()
 
   async def async_set_fan_mode(self, fan_mode):
     """Set new target fan mode."""
@@ -244,7 +244,7 @@ class ElectroluxClimate(ClimateEntity):
       await self._appliance.execute_command("fanSpeedSetting", "middle")
     elif fan_mode == FAN_HIGH:
       await self._appliance.execute_command("fanSpeedSetting", "high")
-    self.async_write_ha_state
+    self.async_write_ha_state()
 
   async def async_set_temperature(self, **kwargs):
     """Set new target temperature."""
@@ -258,4 +258,4 @@ class ElectroluxClimate(ClimateEntity):
       await self._appliance.execute_command("targetTemperatureF", temperature)
     else:
       await self._appliance.execute_command("targetTemperatureC", temperature)
-    self.async_write_ha_state
+    self.async_write_ha_state()
