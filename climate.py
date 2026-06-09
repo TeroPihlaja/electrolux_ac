@@ -189,11 +189,12 @@ class ElectroluxClimate(ClimateEntity):
     )
     if hvac_mode == HVACMode.OFF:
       await self.async_turn_off()
-    else:
-      await self.async_turn_on()
+      return
+    await self.async_turn_on()
     if hvac_mode == HVACMode.FAN_ONLY:
-      hvac_mode = "fanonly"
-    await self._appliance.execute_command("mode", hvac_mode)
+      await self._appliance.execute_command("mode", "fanOnly")
+    else:
+      await self._appliance.execute_command("mode", hvac_mode)
     self.async_write_ha_state()
 
   async def async_turn_on(self):
