@@ -95,16 +95,16 @@ class Appliance:
         asyncio.ensure_future(self.update_appliance_info())
         asyncio.ensure_future(self.watch_for_state_updates())
 
-    async def wait_for_state(self, status_ready):
-      STATE_MAX = 5
-      for i in range(STATE_MAX):
-        _LOGGER.warn(f"Waiting for initial state: {i}/{STATE_MAX}")
-        await asyncio.sleep(5)
-        if not self._states:
-          continue
-        status_ready.set()
-        return
-      raise ApplianceStateNotReady("Did not receive state information for appliance: %s", self._id)
+    async def wait_for_state(self):
+        STATE_MAX = 5
+        for i in range(STATE_MAX):
+            _LOGGER.warning("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
+            await asyncio.sleep(5)
+            if self._states:
+                return
+        raise ApplianceStateNotReady(
+            "Did not receive state information for appliance: %s" % self._id
+        )
 
     async def watch_for_state_updates(self):
       if self._following_changes:

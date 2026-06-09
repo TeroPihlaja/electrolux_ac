@@ -9,7 +9,6 @@ from homeassistant.helpers.entity import Entity
 
 from .const import DOMAIN
 import logging
-import asyncio
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,9 +18,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
   new_devices = []
   for appliance in hub.appliances:
-    status_ready = asyncio.Event()
-    asyncio.create_task(appliance.wait_for_state(status_ready))
-    await status_ready.wait()
+    try:
+      await appliance.wait_for_state()
+    except Exception:
+      _LOGGER.warning("Skipping appliance %s — state not ready", appliance.appliance_id)
+      continue
     new_devices.append(TemperatureSensor(appliance))
   if new_devices:
     async_add_entities(new_devices)

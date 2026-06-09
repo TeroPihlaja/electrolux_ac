@@ -43,9 +43,11 @@ async def async_setup_entry(
 
   new_devices = []
   for appliance in hub.appliances:
-    status_ready = asyncio.Event()
-    asyncio.create_task(appliance.wait_for_state(status_ready))
-    await status_ready.wait()
+    try:
+      await appliance.wait_for_state()
+    except Exception:
+      _LOGGER.warning("Skipping appliance %s — state not ready", appliance.appliance_id)
+      continue
     if appliance.appliance_info.get("deviceType") == "PORTABLE_AIR_CONDITIONER":
       new_devices.append(ElectroluxClimate(appliance))
   if new_devices:
