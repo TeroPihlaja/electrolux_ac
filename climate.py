@@ -143,7 +143,7 @@ class ElectroluxClimate(ClimateEntity):
       return HVACMode.COOL
     elif self._appliance._states.get('mode') == 'dry':
       return HVACMode.DRY
-    elif self._appliance._states.get('mode') == 'fanonly':
+    elif self._appliance._states.get('mode') == 'fanOnly':
       return HVACMode.FAN_ONLY
     else:
       return HVACMode.OFF

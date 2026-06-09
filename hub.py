@@ -25,8 +25,11 @@ class Hub:
         self._client = None
         self.appliances = None
         self.online = False
-        self._loop = asyncio.get_event_loop()
-        self._loop.create_task(self.update_loop())
+
+        asyncio.ensure_future(self.discover_appliances())
+
+        # self._loop = asyncio.get_event_loop()
+        # self._loop.create_task(self.update_loop())
 
     @property
     def hub_id(self) -> str:
@@ -36,7 +39,7 @@ class Hub:
     async def connect(self) -> any:
         """Connect to the hub."""
         _LOGGER.info("Connecting to Electrolux hub")
-        self._client = OneAppApi(self._email, self._password)
+        self._client = OneAppApi(self._email, self._password,"fi" , logger=_LOGGER)
         self.online = True
 
     async def disconnect(self):
@@ -68,7 +71,7 @@ class Hub:
     async def update_loop(self):
         """Update loop for the hub."""
         while True:
-            await asyncio.sleep(300)
+            await asyncio.sleep(1800)
             if not self.online:
                 await self.connect()
             await self.discover_appliances()
@@ -82,7 +85,6 @@ class Appliance:
         self.hub = hub
         self.name = name
         self._callbacks = set()
-        self._loop = asyncio.get_event_loop()
 
         self.capabilities = {}
 
