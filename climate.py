@@ -56,22 +56,13 @@ class ElectroluxClimate(ClimateEntity):
   _attr_should_poll = False
 
   _attr_precision = PRECISION_WHOLE
-  _attr_supported_features = (
-    ClimateEntityFeature.TARGET_TEMPERATURE
-    | ClimateEntityFeature.FAN_MODE
-    | ClimateEntityFeature.PRESET_MODE
-    | ClimateEntityFeature.SWING_MODE
-    | ClimateEntityFeature.TURN_OFF
-    | ClimateEntityFeature.TURN_ON
-  )
+  _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.SWING_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
   _attr_target_temperature_step = TARGET_TEMPERATURE_STEP
   _attr_hvac_modes = [HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY, HVACMode.OFF]
   _attr_fan_modes = [FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
   _attr_swing_modes = SWING_MODES
   _attr_name = None
   _enable_turn_on_off_backwards_compatibility = False
-
-  _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.SWING_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
 
   def __init__(self, appliance) -> None:
     """Initialize the sensor."""
