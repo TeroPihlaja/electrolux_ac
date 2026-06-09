@@ -97,13 +97,15 @@ class ElectroluxClimate(ClimateEntity):
   @property
   def device_info(self) -> DeviceInfo:
     """Information about this entity/device."""
+    model = self._appliance.appliance_info.get('model')
+    brand = self._appliance.appliance_info.get('brand')
     return DeviceInfo(
       identifiers={
         (DOMAIN, self._appliance.appliance_id)
       },
       name=self.name,
-      model=self._appliance.appliance_info.get('model').capitalize(),
-      manufacturer=self._appliance.appliance_info.get('brand').capitalize(),
+      model=model.capitalize() if model else None,
+      manufacturer=brand.capitalize() if brand else None,
     )
 
   @property
