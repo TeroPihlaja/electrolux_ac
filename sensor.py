@@ -25,6 +25,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
       _LOGGER.warning("Skipping appliance %s — state not ready", appliance.appliance_id)
       continue
     new_devices.append(TemperatureSensor(appliance))
+    # "clean" means the filter needs cleaning (imperative); "good" means it was recently cleaned.
     new_devices.append(GenericSensor(
       appliance, "filterState", "Filter State", "filter_state",
       None, None, None,
