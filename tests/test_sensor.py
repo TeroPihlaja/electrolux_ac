@@ -49,3 +49,13 @@ def test_attributes_set_correctly(mock_appliance):
     assert sensor.state_class == SensorStateClass.TOTAL_INCREASING
     assert sensor.unique_id == "test_appliance_id_filter_runtime"
     assert sensor.name == "Test AC Filter Runtime"
+
+
+def test_hepa_filter_lifetime(mock_appliance):
+    mock_appliance._states = {"hepaFilterLifeTime": 24064}
+    sensor = GenericSensor(
+        mock_appliance, "hepaFilterLifeTime", "HEPA Filter Lifetime", "hepa_filter_lifetime",
+        None, None, None,
+    )
+    assert sensor.native_value == 24064
+    assert sensor.unique_id == "test_appliance_id_hepa_filter_lifetime"

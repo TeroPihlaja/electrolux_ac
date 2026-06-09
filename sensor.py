@@ -45,6 +45,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
       appliance, "networkInterface.rssi", "WiFi Signal", "rssi",
       SensorDeviceClass.SIGNAL_STRENGTH, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, None,
     ))
+    new_devices.append(GenericSensor(
+      appliance, "hepaFilterLifeTime", "HEPA Filter Lifetime", "hepa_filter_lifetime",
+      None, None, None,
+    ))
   if new_devices:
     async_add_entities(new_devices)
 
