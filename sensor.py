@@ -1,11 +1,8 @@
 """Platform for sensor integration."""
 
-from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 
-from homeassistant.const import (
-    UnitOfTemperature
-)
-from homeassistant.helpers.entity import Entity
+from homeassistant.const import UnitOfTemperature
 
 from .const import DOMAIN
 import logging
@@ -46,7 +43,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 # fourWayValveState
 # evapDefrostState
 
-class SensorBase(Entity):
+class SensorBase(SensorEntity):
   """Base representation of a Hello World Sensor."""
 
   should_poll = False
@@ -78,30 +75,28 @@ class TemperatureSensor(SensorBase):
   """Representation of a Sensor."""
 
   device_class = SensorDeviceClass.TEMPERATURE
+  state_class = SensorStateClass.MEASUREMENT
 
   def __init__(self, appliance):
     """Initialize the sensor."""
     super().__init__(appliance)
 
     self._attr_unique_id = f"{self._appliance.appliance_id}_temperature"
-
-    # The name of the entity
     self._attr_name = f"{self._appliance.name} Temperature"
 
-    _LOGGER.warn(f"Creating temperature sensor with presentation: {self._appliance._states.get('temperatureRepresentation')}")
+    _LOGGER.warning("Creating temperature sensor with presentation: %s",
+                    self._appliance._states.get('temperatureRepresentation'))
     if self._appliance._states.get('temperatureRepresentation') == 'celsius':
-      self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
+      self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     else:
-      self._attr_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+      self._attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
 
   @property
-  def state(self):
+  def native_value(self):
     """Return the state of the sensor."""
-    if self._attr_unit_of_measurement == UnitOfTemperature.CELSIUS:
+    if self._attr_native_unit_of_measurement == UnitOfTemperature.CELSIUS:
       temperature = self._appliance._states.get('ambientTemperatureC')
-    else: 
+    else:
       temperature = self._appliance._states.get('ambientTemperatureF')
-
-    _LOGGER.debug(f"Returning temperature: {temperature}")
-
+    _LOGGER.debug("Returning temperature: %s", temperature)
     return temperature
