@@ -25,6 +25,26 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
       _LOGGER.warning("Skipping appliance %s — state not ready", appliance.appliance_id)
       continue
     new_devices.append(TemperatureSensor(appliance))
+    new_devices.append(GenericSensor(
+      appliance, "filterState", "Filter State", "filter_state",
+      None, None, None,
+    ))
+    new_devices.append(GenericSensor(
+      appliance, "filterRuntime", "Filter Runtime", "filter_runtime",
+      SensorDeviceClass.DURATION, UnitOfTime.SECONDS, SensorStateClass.TOTAL_INCREASING,
+    ))
+    new_devices.append(GenericSensor(
+      appliance, "totalRuntime", "Total Runtime", "total_runtime",
+      SensorDeviceClass.DURATION, UnitOfTime.SECONDS, SensorStateClass.TOTAL_INCREASING,
+    ))
+    new_devices.append(GenericSensor(
+      appliance, "compressorState", "Compressor State", "compressor_state",
+      None, None, None,
+    ))
+    new_devices.append(GenericSensor(
+      appliance, "networkInterface.rssi", "WiFi Signal", "rssi",
+      SensorDeviceClass.SIGNAL_STRENGTH, SIGNAL_STRENGTH_DECIBELS_MILLIWATT, None,
+    ))
   if new_devices:
     async_add_entities(new_devices)
 
