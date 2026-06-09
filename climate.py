@@ -6,13 +6,13 @@ from homeassistant.components.climate import (
   FAN_HIGH,
   FAN_LOW,
   FAN_MEDIUM,
+  PRESET_NONE,
+  PRESET_SLEEP,
   SWING_OFF,
   SWING_VERTICAL,
   ClimateEntity,
   ClimateEntityFeature,
   HVACMode,
-  ClimateEntity,
-  ClimateEntityFeature,
 )
 
 from homeassistant.const import PRECISION_WHOLE, UnitOfTemperature
@@ -56,7 +56,15 @@ class ElectroluxClimate(ClimateEntity):
   _attr_should_poll = False
 
   _attr_precision = PRECISION_WHOLE
-  _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.SWING_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
+  _attr_supported_features = (
+    ClimateEntityFeature.TARGET_TEMPERATURE
+    | ClimateEntityFeature.FAN_MODE
+    | ClimateEntityFeature.SWING_MODE
+    | ClimateEntityFeature.PRESET_MODE
+    | ClimateEntityFeature.TURN_ON
+    | ClimateEntityFeature.TURN_OFF
+  )
+  _attr_preset_modes = [PRESET_NONE, PRESET_SLEEP]
   _attr_target_temperature_step = TARGET_TEMPERATURE_STEP
   _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY]
   _attr_fan_modes = [FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
@@ -172,6 +180,18 @@ class ElectroluxClimate(ClimateEntity):
       return UnitOfTemperature.FAHRENHEIT
     else:
       return UnitOfTemperature.CELSIUS
+
+  @property
+  def preset_mode(self) -> str:
+    if self._appliance._states.get('sleepMode') == 'on':
+      return PRESET_SLEEP
+    return PRESET_NONE
+
+  async def async_set_preset_mode(self, preset_mode: str) -> None:
+    """Set sleep mode on or off."""
+    value = "on" if preset_mode == PRESET_SLEEP else "off"
+    await self._appliance.execute_command("sleepMode", value)
+    self.async_write_ha_state()
 
   async def async_set_hvac_mode(self, hvac_mode):
     """Set new target hvac mode."""
