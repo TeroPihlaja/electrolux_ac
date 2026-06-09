@@ -58,7 +58,7 @@ class ElectroluxClimate(ClimateEntity):
   _attr_precision = PRECISION_WHOLE
   _attr_supported_features = ClimateEntityFeature.TARGET_TEMPERATURE | ClimateEntityFeature.FAN_MODE | ClimateEntityFeature.SWING_MODE | ClimateEntityFeature.TURN_ON | ClimateEntityFeature.TURN_OFF
   _attr_target_temperature_step = TARGET_TEMPERATURE_STEP
-  _attr_hvac_modes = [HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY, HVACMode.OFF]
+  _attr_hvac_modes = [HVACMode.OFF, HVACMode.COOL, HVACMode.DRY, HVACMode.FAN_ONLY]
   _attr_fan_modes = [FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH]
   _attr_swing_modes = SWING_MODES
   _attr_name = None
