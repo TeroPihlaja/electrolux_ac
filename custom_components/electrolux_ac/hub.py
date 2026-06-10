@@ -55,6 +55,9 @@ class Hub:
     async def disconnect(self):
         """Disconnect from the hub."""
         _LOGGER.debug("Disconnecting from Electrolux hub")
+        if self._update_task is not None:
+            self._update_task.cancel()
+            self._update_task = None
         if self._client is not None:
             await self._client.close()
         self._client = None
@@ -63,12 +66,39 @@ class Hub:
     async def discover_appliances(self):
         if not self.online:
           await self.connect()
-        appliances = await self._client.get_appliances_list()
+        appliances_raw = await self._client.get_appliances_list()
         appliances_out = []
-        for appliance in appliances:
-          appliances_out.extend([Appliance(appliance.get("applianceId"), appliance.get("applianceData").get("applianceName"), self)])
+        for appliance_data in appliances_raw:
+          appliance = Appliance(
+              appliance_data.get("applianceId"),
+              appliance_data.get("applianceData").get("applianceName"),
+              self,
+          )
+          appliance._connected = (appliance_data.get("connectionState") == "Connected")
+          appliances_out.append(appliance)
         self.appliances = appliances_out
-    
+        if self._update_task is None:
+            self._update_task = asyncio.ensure_future(self.update_loop())
+
+    async def refresh_connection_state(self):
+        """Poll connectionState for all known appliances and update _connected in-place."""
+        try:
+            appliances_raw = await self._client.get_appliances_list()
+            state_by_id = {a.get("applianceId"): a for a in appliances_raw}
+            for appliance in (self.appliances or []):
+                raw = state_by_id.get(appliance.appliance_id, {})
+                was_connected = appliance._connected
+                appliance._connected = (raw.get("connectionState") == "Connected")
+                if appliance._connected != was_connected:
+                    _LOGGER.debug(
+                        "Appliance %s is now %s",
+                        appliance.appliance_id,
+                        "connected" if appliance._connected else "disconnected",
+                    )
+                    appliance.publish_updates()
+        except Exception:
+            _LOGGER.debug("Failed to refresh connection state", exc_info=True)
+
     async def test_connection(self) -> bool:
         try:
           if not self.online:
@@ -79,12 +109,10 @@ class Hub:
         return True
 
     async def update_loop(self):
-        """Update loop for the hub."""
+        """Poll appliance connection state every 30 minutes."""
         while True:
             await asyncio.sleep(1800)
-            if not self.online:
-                await self.connect()
-            await self.discover_appliances()
+            await self.refresh_connection_state()
 
 class Appliance:
     """Dummy appliance (device for HA) for Hello World example."""
@@ -106,6 +134,7 @@ class Appliance:
         self.model = None
 
         self._following_changes = False
+        self._connected = False
 
         asyncio.ensure_future(self.update_appliance_info())
         asyncio.ensure_future(self.watch_for_state_updates())
@@ -131,6 +160,7 @@ class Appliance:
       _LOGGER.debug("appliance state updated: %s", json.dumps(data))
       if self._id not in data:
         return
+      self._connected = True
       for key, value in data[self._id].items():
         self._states[key] = value
       _LOGGER.debug("current state: %s", self._states)
@@ -177,9 +207,9 @@ class Appliance:
             callback()
 
     @property
-    def online(self) -> float:
-        """appliance is online."""
-        return True
+    def online(self) -> bool:
+        """Return True if the appliance is connected to the cloud."""
+        return self._connected
 
 class ApplianceStateNotReady(exceptions.HomeAssistantError):
     """Error to indicate we cannot find state information for appliance."""
