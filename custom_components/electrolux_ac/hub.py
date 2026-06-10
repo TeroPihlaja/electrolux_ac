@@ -13,6 +13,19 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+# Capabilities we handle or knowingly ignore. Anything else is logged as unsupported.
+_KNOWN_CAPABILITIES = {
+    # Controlled by the climate entity
+    "executeCommand", "targetTemperatureC", "fanSpeedSetting",
+    "mode", "verticalSwing", "sleepMode",
+    # Read-only / exposed as sensors
+    "applianceState", "fanSpeedState", "networkInterface", "ambientTemperatureC",
+    # Known but not yet implemented
+    "alerts", "uiLockMode", "startTime", "stopTime",
+}
+
+_ISSUE_TRACKER = "https://github.com/TeroPihlaja/electrolux_ac/issues"
+
 class Hub:
     def __init__(self, hass: HomeAssistant, email: str, password: str):
         _LOGGER.debug("Creating Electrolux hub with email %s", email)
@@ -130,6 +143,14 @@ class Appliance:
       _LOGGER.debug("appliance capabilities: %s", json.dumps(capab))
 
       self.capabilities = capab
+
+      unknown = sorted(set(capab.keys()) - _KNOWN_CAPABILITIES)
+      for key in unknown:
+          _LOGGER.warning(
+              "Unsupported capability '%s' found on appliance %s. "
+              "Please open an issue at %s so it can be added.",
+              key, self._id, _ISSUE_TRACKER,
+          )
 
     @property
     def appliance_id(self) -> str:

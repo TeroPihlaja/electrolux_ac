@@ -53,25 +53,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
   if new_devices:
     async_add_entities(new_devices)
 
-# TODO: Add more sensors
-# startTime
-# stopTime
-# sleepMode
-# uiLockMode
-# filterState
-# VmNo_MCU
-# dataModelVersion
-# VmNo_NIU
-# compressorState
-# totalRuntime
-# compressorCoolingRuntime
-# compressorHeatingRuntime
-# filterRuntime
-# networkInterface.linkQualityIndicator
-# networkInterface.rssi
-# fourWayValveState
-# evapDefrostState
-
 class SensorBase(SensorEntity):
   """Base representation of a Hello World Sensor."""
 
