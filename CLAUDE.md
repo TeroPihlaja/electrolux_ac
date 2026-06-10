@@ -1,16 +1,19 @@
-git@gitlab.com:TeroPihlaja/electrolux_ac.git
+git@github.com:TeroPihlaja/electrolux_ac.git
 
 SSH Connection:
 crazyguy@home.crazyguy.info
 
-Folder: /home/crazyguy/homeassistant/config/custom_components/electrolux_ac
+Server repo: /home/crazyguy/homeassistant/electrolux_ac/
+Mounted into container at: /config/custom_components/electrolux_ac
 
 ## Deploy workflow
 
 1. Make changes and commit locally in `/Users/teropihlaja/dev/electrolux_ac/`
-2. Push: `git push origin main`
-3. Pull on server: `ssh crazyguy@home.crazyguy.info "cd /home/crazyguy/homeassistant/config/custom_components/electrolux_ac && git pull origin main"`
+2. Push: `git push github main`
+3. Pull on server: `ssh crazyguy@home.crazyguy.info "cd /home/crazyguy/homeassistant/electrolux_ac && git pull"`
 4. Restart HA: `ssh crazyguy@home.crazyguy.info "cd /home/crazyguy/homeassistant && docker compose restart homeassistant"`
+
+Note: volume mount is configured in `compose.yml` — use `docker compose up -d` if the mount ever needs to be reapplied after a compose.yml change.
 
 Always commit first, then push separately.
 
@@ -29,10 +32,10 @@ If `.venv` doesn't exist:
 
 ## Key files
 
-- `hub.py` — Hub (API connection) and Appliance (state + callbacks) classes
-- `climate.py` — ClimateEntity: modes, fan, swing, temperature, sleep preset
-- `sensor.py` — TemperatureSensor + GenericSensor (filter, runtime, RSSI, compressor)
-- `__init__.py` — async_setup_entry / async_unload_entry
+- `custom_components/electrolux_ac/hub.py` — Hub (API connection) and Appliance (state + callbacks) classes
+- `custom_components/electrolux_ac/climate.py` — ClimateEntity: modes, fan, swing, temperature, sleep preset
+- `custom_components/electrolux_ac/sensor.py` — TemperatureSensor + GenericSensor (filter, runtime, RSSI, compressor)
+- `custom_components/electrolux_ac/__init__.py` — async_setup_entry / async_unload_entry
 
 ## Device
 
