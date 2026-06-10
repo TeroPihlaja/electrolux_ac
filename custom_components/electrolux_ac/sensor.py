@@ -32,11 +32,13 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     ))
     new_devices.append(GenericSensor(
       appliance, "filterRuntime", "Filter Runtime", "filter_runtime",
-      SensorDeviceClass.DURATION, UnitOfTime.SECONDS, SensorStateClass.TOTAL_INCREASING,
+      SensorDeviceClass.DURATION, UnitOfTime.HOURS, SensorStateClass.TOTAL_INCREASING,
+      converter=lambda v: round(v / 3600, 1),
     ))
     new_devices.append(GenericSensor(
       appliance, "totalRuntime", "Total Runtime", "total_runtime",
-      SensorDeviceClass.DURATION, UnitOfTime.SECONDS, SensorStateClass.TOTAL_INCREASING,
+      SensorDeviceClass.DURATION, UnitOfTime.HOURS, SensorStateClass.TOTAL_INCREASING,
+      converter=lambda v: round(v / 3600, 1),
     ))
     new_devices.append(GenericSensor(
       appliance, "compressorState", "Compressor State", "compressor_state",
@@ -89,7 +91,7 @@ class GenericSensor(SensorBase):
   """Sensor that reads a single key from appliance state, with dot-notation nested access."""
 
   def __init__(self, appliance, state_key, name_suffix, unique_id_suffix,
-               device_class, native_unit, state_class):
+               device_class, native_unit, state_class, converter=None):
     super().__init__(appliance)
     self._state_key = state_key
     self._attr_unique_id = f"{appliance.appliance_id}_{unique_id_suffix}"
@@ -97,6 +99,7 @@ class GenericSensor(SensorBase):
     self._attr_device_class = device_class
     self._attr_native_unit_of_measurement = native_unit
     self._attr_state_class = state_class
+    self._converter = converter
 
   @property
   def native_value(self):
@@ -107,6 +110,8 @@ class GenericSensor(SensorBase):
       value = value.get(part)
       if value is None:
         return None
+    if value is not None and self._converter is not None:
+      return self._converter(value)
     return value
 
 

@@ -51,6 +51,25 @@ def test_attributes_set_correctly(mock_appliance):
     assert sensor.name == "Test AC Filter Runtime"
 
 
+def test_converter_applied_to_value(mock_appliance):
+    mock_appliance._states = {"filterRuntime": 3600}
+    sensor = GenericSensor(
+        mock_appliance, "filterRuntime", "Filter Runtime", "filter_runtime",
+        SensorDeviceClass.DURATION, "h", SensorStateClass.TOTAL_INCREASING,
+        converter=lambda v: round(v / 3600, 1),
+    )
+    assert sensor.native_value == 1.0
+
+
+def test_converter_none_returns_raw(mock_appliance):
+    mock_appliance._states = {"filterRuntime": 3600}
+    sensor = GenericSensor(
+        mock_appliance, "filterRuntime", "Filter Runtime", "filter_runtime",
+        None, None, None,
+    )
+    assert sensor.native_value == 3600
+
+
 def test_hepa_filter_lifetime(mock_appliance):
     mock_appliance._states = {"hepaFilterLifeTime": 24064}
     sensor = GenericSensor(
