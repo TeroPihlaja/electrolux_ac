@@ -27,7 +27,7 @@ _KNOWN_CAPABILITIES = {
 _ISSUE_TRACKER = "https://github.com/TeroPihlaja/electrolux_ac/issues"
 
 class Hub:
-    def __init__(self, hass: HomeAssistant, email: str, password: str):
+    def __init__(self, hass: HomeAssistant, email: str, password: str, country_code: str = "fi"):
         _LOGGER.debug("Creating Electrolux hub with email %s", email)
 
         self._email = email
@@ -38,6 +38,8 @@ class Hub:
         self._client = None
         self.appliances = None
         self.online = False
+        self._country_code = country_code
+        self._update_task = None
 
     @property
     def hub_id(self) -> str:
@@ -47,7 +49,7 @@ class Hub:
     async def connect(self) -> any:
         """Connect to the hub."""
         _LOGGER.debug("Connecting to Electrolux hub")
-        self._client = OneAppApi(self._email, self._password,"fi" , logger=_LOGGER)
+        self._client = OneAppApi(self._email, self._password, self._country_code, logger=_LOGGER)
         self.online = True
 
     async def disconnect(self):
