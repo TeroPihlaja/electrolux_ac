@@ -57,9 +57,7 @@ def test_state_update_sets_connected():
 @pytest.mark.asyncio
 async def test_refresh_connection_state_updates_connected():
     hub = make_hub()
-    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future"):
-        appliance = Appliance("test_id", "Test AC", hub)
-    appliance._connected = True
+    appliance = make_appliance(connected=True)
     hub.appliances = [appliance]
     hub._client = AsyncMock()
     hub._client.get_appliances_list.return_value = [
@@ -73,9 +71,7 @@ async def test_refresh_connection_state_updates_connected():
 @pytest.mark.asyncio
 async def test_refresh_connection_state_publishes_on_change():
     hub = make_hub()
-    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future"):
-        appliance = Appliance("test_id", "Test AC", hub)
-    appliance._connected = True
+    appliance = make_appliance(connected=True)
     callback = MagicMock()
     appliance.register_callback(callback)
     hub.appliances = [appliance]
