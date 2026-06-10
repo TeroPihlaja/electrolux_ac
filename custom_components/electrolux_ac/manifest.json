@@ -1,13 +1,13 @@
 {
   "domain": "electrolux_ac",
-  "name": "Electrolux AC control",
+  "name": "Electrolux AC",
   "codeowners": ["@TeroPihlaja"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "",
+  "documentation": "https://github.com/TeroPihlaja/electrolux_ac",
   "integration_type": "hub",
-  "iot_class": "cloud_polling",
-  "issue_tracker": "",
+  "iot_class": "cloud_push",
+  "issue_tracker": "https://github.com/TeroPihlaja/electrolux_ac/issues",
   "requirements": ["pyelectroluxocp==0.1.3"],
-  "version": "v0.1.0"
+  "version": "1.0.0"
 }
