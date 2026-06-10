@@ -6,7 +6,8 @@
         "description": "Please enter your login information. This is the same information you use to log in to the Electrolux mobile app.",
         "data": {
           "email": "Email address",
-          "password": "Password"
+          "password": "Password",
+          "country_code": "Country code (2 letters, e.g. fi, us, de)"
         }
       }
     },

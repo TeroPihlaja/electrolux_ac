@@ -5,9 +5,8 @@ from homeassistant.config_entries import ConfigEntry, ConfigEntryNotReady
 from homeassistant.core import HomeAssistant
 
 from . import hub
-from .const import DOMAIN
+from .const import DOMAIN, CONF_COUNTRY_CODE
 import aiohttp
-
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -16,7 +15,10 @@ PLATFORMS: list[str] = ["sensor", "climate"]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hello World from a config entry."""
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = hub.Hub(hass, entry.data["email"], entry.data["password"])
+    country_code = entry.data.get(CONF_COUNTRY_CODE, "fi")
+    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = hub.Hub(
+        hass, entry.data["email"], entry.data["password"], country_code
+    )
     try:
         await hass.data[DOMAIN][entry.entry_id].discover_appliances()
     except aiohttp.client_exceptions.ClientResponseError as ex:
