@@ -138,8 +138,8 @@ class TemperatureSensor(SensorBase):
     self._attr_unique_id = f"{self._appliance.appliance_id}_temperature"
     self._attr_name = f"{self._appliance.name} Temperature"
 
-    _LOGGER.warning("Creating temperature sensor with presentation: %s",
-                    self._appliance._states.get('temperatureRepresentation'))
+    _LOGGER.debug("Creating temperature sensor with presentation: %s",
+                  self._appliance._states.get('temperatureRepresentation'))
     if self._appliance._states.get('temperatureRepresentation') == 'celsius':
       self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
     else:

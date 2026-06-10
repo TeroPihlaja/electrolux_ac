@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class Hub:
     def __init__(self, hass: HomeAssistant, email: str, password: str):
-        _LOGGER.info("Creating Electrolux hub with email %s", email)
+        _LOGGER.debug("Creating Electrolux hub with email %s", email)
 
         self._email = email
         self._password = password
@@ -33,13 +33,13 @@ class Hub:
 
     async def connect(self) -> any:
         """Connect to the hub."""
-        _LOGGER.info("Connecting to Electrolux hub")
+        _LOGGER.debug("Connecting to Electrolux hub")
         self._client = OneAppApi(self._email, self._password,"fi" , logger=_LOGGER)
         self.online = True
 
     async def disconnect(self):
         """Disconnect from the hub."""
-        _LOGGER.info("Disconnecting from Electrolux hub")
+        _LOGGER.debug("Disconnecting from Electrolux hub")
         if self._client is not None:
             await self._client.close()
         self._client = None
@@ -98,7 +98,7 @@ class Appliance:
     async def wait_for_state(self):
         STATE_MAX = 5
         for i in range(STATE_MAX):
-            _LOGGER.warning("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
+            _LOGGER.debug("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
             await asyncio.sleep(5)
             if self._states:
                 return
@@ -113,7 +113,7 @@ class Appliance:
       self._following_changes = True
 
     def state_update_callback(self, data):
-      _LOGGER.info("appliance state updated: %s", json.dumps(data))
+      _LOGGER.debug("appliance state updated: %s", json.dumps(data))
       if self._id not in data:
         return
       for key, value in data[self._id].items():
@@ -123,11 +123,11 @@ class Appliance:
 
     async def update_appliance_info(self):
       info = await self.hub._client.get_appliances_info([self._id])
-      _LOGGER.warn("appliance info: %s", json.dumps((info)))
+      _LOGGER.debug("appliance info: %s", json.dumps(info))
       self.appliance_info = info[0]
       
       capab = await self.hub._client.get_appliance_capabilities(self._id)
-      _LOGGER.info("appliance capabilities: %s", json.dumps((capab)))
+      _LOGGER.debug("appliance capabilities: %s", json.dumps(capab))
 
       self.capabilities = capab
 
