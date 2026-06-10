@@ -20,8 +20,9 @@ _KNOWN_CAPABILITIES = {
     "mode", "verticalSwing", "sleepMode",
     # Read-only / exposed as sensors
     "applianceState", "fanSpeedState", "networkInterface", "ambientTemperatureC",
+    "alerts",
     # Known but not yet implemented
-    "alerts", "uiLockMode", "startTime", "stopTime",
+    "uiLockMode", "startTime", "stopTime",
 }
 
 _ISSUE_TRACKER = "https://github.com/TeroPihlaja/electrolux_ac/issues"
@@ -163,6 +164,13 @@ class Appliance:
       self._connected = True
       for key, value in data[self._id].items():
         self._states[key] = value
+      alerts = self._states.get("alerts")
+      if alerts:
+          _LOGGER.warning(
+              "Appliance %s has active alerts: %s — "
+              "please report the format at %s",
+              self._id, alerts, _ISSUE_TRACKER,
+          )
       _LOGGER.debug("current state: %s", self._states)
       self.publish_updates()
 

@@ -50,6 +50,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
       appliance, "hepaFilterLifeTime", "HEPA Filter Lifetime", "hepa_filter_lifetime",
       None, None, None,
     ))
+    new_devices.append(GenericSensor(
+      appliance, "alerts", "Alerts", "alerts",
+      None, None, None,
+    ))
   if new_devices:
     async_add_entities(new_devices)
 

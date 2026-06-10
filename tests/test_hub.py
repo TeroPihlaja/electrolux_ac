@@ -82,3 +82,25 @@ async def test_refresh_connection_state_publishes_on_change():
     ]
     await hub.refresh_connection_state()
     callback.assert_called_once()
+
+
+def test_state_update_logs_warning_for_non_empty_alerts(caplog):
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    import logging
+    with caplog.at_level(logging.WARNING, logger="custom_components.electrolux_ac.hub"):
+        appliance.state_update_callback({
+            "test_id": {"alerts": ["DRAIN_PAN_FULL"], "applianceState": "running"}
+        })
+    assert any("DRAIN_PAN_FULL" in r.message for r in caplog.records)
+
+
+def test_state_update_no_warning_when_alerts_empty(caplog):
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    import logging
+    with caplog.at_level(logging.WARNING, logger="custom_components.electrolux_ac.hub"):
+        appliance.state_update_callback({
+            "test_id": {"alerts": [], "applianceState": "running"}
+        })
+    assert not any("alert" in r.message.lower() for r in caplog.records)
