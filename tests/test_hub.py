@@ -31,7 +31,7 @@ async def test_hub_defaults_country_code_fi():
 def make_appliance(connected=True):
     hub = MagicMock()
     hub._client = MagicMock()
-    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future"):
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future", side_effect=lambda c: c.close()):
         appliance = Appliance("test_id", "Test AC", hub)
     appliance._connected = connected
     return appliance
