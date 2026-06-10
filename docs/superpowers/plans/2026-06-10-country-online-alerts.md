@@ -314,13 +314,18 @@ git -C /Users/teropihlaja/dev/electrolux_ac commit -m "feat: add country code to
 
 ---
 
-## Task 3: Online detection from connectionState (TDD)
+## Task 3: Online detection from connectionState + 30-min polling (TDD)
 
 **Files:**
 - Modify: `custom_components/electrolux_ac/hub.py`
+- Modify: `custom_components/electrolux_ac/__init__.py`
 - Modify: `tests/test_hub.py`
 
-`Appliance.online` currently returns `True` unconditionally. Fix it to reflect the real `connectionState` from `get_appliances_list()`. When a state update arrives, set `_connected = True` (confirming the device is communicating). `discover_appliances()` sets initial connected state from the API response.
+`Appliance.online` returns `True` unconditionally. Fix it to use `connectionState` from `get_appliances_list()` at startup, set to `True` on any incoming state update (device is clearly communicating), and refreshed every 30 minutes by a background poll loop.
+
+The poll uses a new `refresh_connection_state()` method — lightweight, no appliance recreation, no callback loss. The loop is started after `discover_appliances()` and cancelled in `disconnect()`.
+
+**Why `refresh_connection_state()` instead of re-calling `discover_appliances()`:** `discover_appliances()` creates new `Appliance` objects, which would lose all registered HA callbacks. `refresh_connection_state()` updates `_connected` in-place on existing objects.
 
 - [ ] **Step 1: Add tests to `tests/test_hub.py`**
 
@@ -352,26 +357,117 @@ def test_state_update_sets_connected():
     appliance._callbacks = set()
     appliance.state_update_callback({"test_id": {"applianceState": "running"}})
     assert appliance._connected is True
+
+
+@pytest.mark.asyncio
+async def test_refresh_connection_state_updates_connected():
+    hub = make_hub()
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future"):
+        appliance = Appliance("test_id", "Test AC", hub)
+    appliance._connected = True
+    hub.appliances = [appliance]
+    hub._client = AsyncMock()
+    hub._client.get_appliances_list.return_value = [
+        {"applianceId": "test_id", "connectionState": "Disconnected",
+         "applianceData": {"applianceName": "Test AC"}}
+    ]
+    await hub.refresh_connection_state()
+    assert appliance._connected is False
+
+
+@pytest.mark.asyncio
+async def test_refresh_connection_state_publishes_on_change():
+    hub = make_hub()
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future"):
+        appliance = Appliance("test_id", "Test AC", hub)
+    appliance._connected = True
+    callback = MagicMock()
+    appliance.register_callback(callback)
+    hub.appliances = [appliance]
+    hub._client = AsyncMock()
+    hub._client.get_appliances_list.return_value = [
+        {"applianceId": "test_id", "connectionState": "Disconnected",
+         "applianceData": {"applianceName": "Test AC"}}
+    ]
+    await hub.refresh_connection_state()
+    callback.assert_called_once()
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
 
 ```bash
-.venv/bin/pytest tests/test_hub.py::test_appliance_online_false_when_not_connected tests/test_hub.py::test_appliance_online_true_when_connected tests/test_hub.py::test_state_update_sets_connected -v
+.venv/bin/pytest tests/test_hub.py::test_appliance_online_false_when_not_connected tests/test_hub.py::test_appliance_online_true_when_connected tests/test_hub.py::test_state_update_sets_connected tests/test_hub.py::test_refresh_connection_state_updates_connected tests/test_hub.py::test_refresh_connection_state_publishes_on_change -v
 ```
 
-Expected: FAILED — `Appliance` has no `_connected` attribute.
+Expected: FAILED — `Appliance` has no `_connected`, Hub has no `refresh_connection_state`.
 
-- [ ] **Step 3: Update `Appliance.__init__` and `online` property in `hub.py`**
+- [ ] **Step 3: Update `hub.py`**
 
-In `Appliance.__init__`, add `self._connected = False` after the other instance variables:
+In `Hub.__init__`, add `self._update_task = None`:
+
+```python
+        self._client = None
+        self.appliances = None
+        self.online = False
+        self._update_task = None
+```
+
+In `Hub.disconnect()`, cancel the poll task:
+
+```python
+    async def disconnect(self):
+        """Disconnect from the hub."""
+        _LOGGER.debug("Disconnecting from Electrolux hub")
+        if self._update_task is not None:
+            self._update_task.cancel()
+            self._update_task = None
+        if self._client is not None:
+            await self._client.close()
+        self._client = None
+        self.online = False
+```
+
+Add new `refresh_connection_state()` method to `Hub` (after `discover_appliances`):
+
+```python
+    async def refresh_connection_state(self):
+        """Poll connectionState for all known appliances and update _connected in-place."""
+        try:
+            appliances_raw = await self._client.get_appliances_list()
+            state_by_id = {a.get("applianceId"): a for a in appliances_raw}
+            for appliance in (self.appliances or []):
+                raw = state_by_id.get(appliance.appliance_id, {})
+                was_connected = appliance._connected
+                appliance._connected = (raw.get("connectionState") == "Connected")
+                if appliance._connected != was_connected:
+                    _LOGGER.debug(
+                        "Appliance %s is now %s",
+                        appliance.appliance_id,
+                        "connected" if appliance._connected else "disconnected",
+                    )
+                    appliance.publish_updates()
+        except Exception:
+            _LOGGER.debug("Failed to refresh connection state", exc_info=True)
+```
+
+Replace `update_loop()` with:
+
+```python
+    async def update_loop(self):
+        """Poll appliance connection state every 30 minutes."""
+        while True:
+            await asyncio.sleep(1800)
+            await self.refresh_connection_state()
+```
+
+In `Appliance.__init__`, add `self._connected = False`:
 
 ```python
         self._following_changes = False
         self._connected = False
 ```
 
-Change `Appliance.online` property from `return True` to:
+Change `Appliance.online` property:
 
 ```python
     @property
@@ -380,7 +476,7 @@ Change `Appliance.online` property from `return True` to:
         return self._connected
 ```
 
-In `state_update_callback`, add `self._connected = True` before the state update loop:
+In `state_update_callback`, add `self._connected = True`:
 
 ```python
     def state_update_callback(self, data):
@@ -394,7 +490,7 @@ In `state_update_callback`, add `self._connected = True` before the state update
       self.publish_updates()
 ```
 
-In `discover_appliances()`, set `_connected` from the API `connectionState`:
+In `discover_appliances()`, set `_connected` from the API and start poll loop:
 
 ```python
     async def discover_appliances(self):
@@ -411,6 +507,8 @@ In `discover_appliances()`, set `_connected` from the API `connectionState`:
           appliance._connected = (appliance_data.get("connectionState") == "Connected")
           appliances_out.append(appliance)
         self.appliances = appliances_out
+        if self._update_task is None:
+            self._update_task = asyncio.ensure_future(self.update_loop())
 ```
 
 - [ ] **Step 4: Run tests**
@@ -425,7 +523,7 @@ Expected: all tests PASS.
 
 ```bash
 git -C /Users/teropihlaja/dev/electrolux_ac add custom_components/electrolux_ac/hub.py tests/test_hub.py
-git -C /Users/teropihlaja/dev/electrolux_ac commit -m "feat: detect appliance online status from connectionState"
+git -C /Users/teropihlaja/dev/electrolux_ac commit -m "feat: detect appliance online status with 30-min polling"
 ```
 
 ---
