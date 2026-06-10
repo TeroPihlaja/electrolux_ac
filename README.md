@@ -15,10 +15,12 @@ Control and monitor your Electrolux portable air conditioner from Home Assistant
 **Sensors**
 - Ambient temperature
 - Filter state (clean/dirty)
-- Filter runtime
-- Total compressor runtime
+- Filter runtime (hours)
+- Total compressor runtime (hours)
 - Compressor state
 - WiFi signal strength (RSSI)
+- HEPA filter lifetime
+- Alerts
 
 ## Requirements
 
@@ -33,11 +35,11 @@ Control and monitor your Electrolux portable air conditioner from Home Assistant
 3. Go to **Settings → Devices & Services → Add Integration** and search for **Electrolux AC**.
 4. Enter your Electrolux account email and password.
 
-### Via Git (recommended for updates)
+### Via Git
 
 ```bash
 cd config/custom_components
-git clone git@gitlab.com:TeroPihlaja/electrolux_ac.git electrolux_ac
+git clone git@github.com:TeroPihlaja/electrolux_ac.git electrolux_ac
 ```
 
 To update:
