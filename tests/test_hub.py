@@ -84,6 +84,40 @@ async def test_refresh_connection_state_publishes_on_change():
     callback.assert_called_once()
 
 
+@pytest.mark.asyncio
+async def test_wait_for_state_returns_when_states_and_capabilities_ready():
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance._states = {"applianceState": "running"}
+    appliance.capabilities = {"targetTemperatureC": {"min": 16, "max": 32}}
+    with patch("custom_components.electrolux_ac.hub.asyncio.sleep", new_callable=AsyncMock):
+        await appliance.wait_for_state()
+
+
+@pytest.mark.asyncio
+async def test_wait_for_state_raises_if_capabilities_never_set():
+    from custom_components.electrolux_ac.hub import ApplianceStateNotReady
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance._states = {"applianceState": "running"}
+    appliance.capabilities = {}
+    with patch("custom_components.electrolux_ac.hub.asyncio.sleep", new_callable=AsyncMock):
+        with pytest.raises(ApplianceStateNotReady):
+            await appliance.wait_for_state()
+
+
+@pytest.mark.asyncio
+async def test_wait_for_state_raises_if_states_never_set():
+    from custom_components.electrolux_ac.hub import ApplianceStateNotReady
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance._states = {}
+    appliance.capabilities = {"targetTemperatureC": {"min": 16, "max": 32}}
+    with patch("custom_components.electrolux_ac.hub.asyncio.sleep", new_callable=AsyncMock):
+        with pytest.raises(ApplianceStateNotReady):
+            await appliance.wait_for_state()
+
+
 def test_state_update_logs_warning_for_non_empty_alerts(caplog):
     appliance = make_appliance()
     appliance._callbacks = set()

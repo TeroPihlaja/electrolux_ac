@@ -52,3 +52,27 @@ async def test_set_preset_none_sends_off(mock_appliance):
 def test_preset_modes_list(mock_appliance):
     climate = _make_climate(mock_appliance)
     assert climate.preset_modes == [PRESET_NONE, PRESET_SLEEP]
+
+
+def test_min_temp_from_capabilities(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance.capabilities = {"targetTemperatureC": {"min": 16, "max": 32}}
+    assert climate.min_temp == 16
+
+
+def test_max_temp_from_capabilities(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance.capabilities = {"targetTemperatureC": {"min": 16, "max": 32}}
+    assert climate.max_temp == 32
+
+
+def test_min_temp_fallback_when_no_capabilities(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance.capabilities = {}
+    assert climate.min_temp == 16
+
+
+def test_max_temp_fallback_when_no_capabilities(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance.capabilities = {}
+    assert climate.max_temp == 32

@@ -11,6 +11,7 @@ def mock_appliance():
     appliance.hub = MagicMock()
     appliance.hub.online = True
     appliance._states = {}
+    appliance.capabilities = {}
     appliance.execute_command = AsyncMock()
     appliance.register_callback = MagicMock()
     appliance.remove_callback = MagicMock()

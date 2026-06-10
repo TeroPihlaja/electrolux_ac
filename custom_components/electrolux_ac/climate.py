@@ -155,6 +155,14 @@ class ElectroluxClimate(ClimateEntity):
     return self._attr_hvac_modes
 
   @property
+  def min_temp(self) -> float:
+    return self._appliance.capabilities.get("targetTemperatureC", {}).get("min", 16)
+
+  @property
+  def max_temp(self) -> float:
+    return self._appliance.capabilities.get("targetTemperatureC", {}).get("max", 32)
+
+  @property
   def target_temperature(self) -> float | None:
     if self._attr_unit_of_measurement == UnitOfTemperature.FAHRENHEIT:
       return self._appliance._states.get('targetTemperatureF')
