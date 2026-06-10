@@ -1,22 +1,3 @@
-git@github.com:TeroPihlaja/electrolux_ac.git
-
-SSH Connection:
-crazyguy@home.crazyguy.info
-
-Server repo: /home/crazyguy/homeassistant/electrolux_ac/
-Mounted into container at: /config/custom_components/electrolux_ac
-
-## Deploy workflow
-
-1. Make changes and commit locally in `/Users/teropihlaja/dev/electrolux_ac/`
-2. Push: `git push github main`
-3. Pull on server: `ssh crazyguy@home.crazyguy.info "cd /home/crazyguy/homeassistant/electrolux_ac && git pull"`
-4. Restart HA: `ssh crazyguy@home.crazyguy.info "cd /home/crazyguy/homeassistant && docker compose restart homeassistant"`
-
-Note: volume mount is configured in `compose.yml` — use `docker compose up -d` if the mount ever needs to be reapplied after a compose.yml change.
-
-Always commit first, then push separately.
-
 ## Running tests
 
 ```bash
@@ -25,7 +6,7 @@ Always commit first, then push separately.
 
 If `.venv` doesn't exist:
 ```bash
-/opt/homebrew/bin/python3 -m venv .venv
+python3 -m venv .venv
 .venv/bin/pip install -r requirements_test.txt
 .venv/bin/pip install pyelectroluxocp
 ```
