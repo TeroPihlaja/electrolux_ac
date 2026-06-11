@@ -153,3 +153,14 @@ async def test_discover_appliances_handles_missing_appliance_data():
         await hub.discover_appliances()
     assert len(hub.appliances) == 1
     assert hub.appliances[0].name is None
+
+
+@pytest.mark.asyncio
+async def test_update_appliance_info_handles_empty_info():
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance.hub._client.get_appliances_info = AsyncMock(return_value=[])
+    appliance.hub._client.get_appliance_capabilities = AsyncMock(return_value={})
+    # Should not raise; appliance_info stays None
+    await appliance.update_appliance_info()
+    assert appliance.appliance_info is None

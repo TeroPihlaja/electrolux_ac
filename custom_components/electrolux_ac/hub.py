@@ -177,8 +177,11 @@ class Appliance:
     async def update_appliance_info(self):
       info = await self.hub._client.get_appliances_info([self._id])
       _LOGGER.debug("appliance info: %s", json.dumps(info))
+      if not info:
+          _LOGGER.warning("No info returned for appliance %s — skipping info/capabilities fetch", self._id)
+          return
       self.appliance_info = info[0]
-      
+
       capab = await self.hub._client.get_appliance_capabilities(self._id)
       _LOGGER.debug("appliance capabilities: %s", json.dumps(capab))
 
