@@ -78,5 +78,4 @@ electrolux_ac/
 ## Known limitations
 
 - Sleep mode is disabled by the device when in DRY or FAN_ONLY mode
-- Temperature range is 16–32°C (device capability)
 - WebSocket token refresh may fail after extended idle periods — restart HA if state stops updating
