@@ -225,7 +225,6 @@ class ElectroluxClimate(ClimateEntity):
     )
     """Turn the entity on."""
     await self._appliance.execute_command("executeCommand", "ON")
-    self._appliance._states['applianceState'] = 'running'
     self.async_write_ha_state()
 
   async def async_turn_off(self):
@@ -235,7 +234,6 @@ class ElectroluxClimate(ClimateEntity):
         self._attr_name,
     )
     await self._appliance.execute_command("executeCommand", "OFF")
-    self._appliance._states['applianceState'] = 'off'
     self.async_write_ha_state()
 
   async def async_set_swing_mode(self, swing_mode):
