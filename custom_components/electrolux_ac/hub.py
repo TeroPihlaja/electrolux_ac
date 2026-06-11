@@ -201,7 +201,7 @@ class Appliance:
         return self._id
 
     async def execute_command(self, command: str, value: str):
-      await asyncio.ensure_future(self.hub._client.execute_appliance_command(self._id, {command: value}))
+      await self.hub._client.execute_appliance_command(self._id, {command: value})
       return True
 
     def register_callback(self, callback: Callable[[], None]):

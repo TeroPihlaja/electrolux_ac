@@ -164,3 +164,12 @@ async def test_update_appliance_info_handles_empty_info():
     # Should not raise; appliance_info stays None
     await appliance.update_appliance_info()
     assert appliance.appliance_info is None
+
+
+@pytest.mark.asyncio
+async def test_execute_command_propagates_api_exception():
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance.hub._client.execute_appliance_command = AsyncMock(side_effect=RuntimeError("API error"))
+    with pytest.raises(RuntimeError, match="API error"):
+        await appliance.execute_command("mode", "cool")
