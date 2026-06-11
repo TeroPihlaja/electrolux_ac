@@ -13,6 +13,8 @@ import logging
 
 _LOGGER = logging.getLogger(__name__)
 
+_seconds_to_hours = lambda v: round(v / 3600, 1)
+
 async def async_setup_entry(hass, config_entry, async_add_entities):
   """Add sensors for passed config_entry in HA."""
   hub = hass.data[DOMAIN][config_entry.entry_id]
@@ -33,12 +35,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     new_devices.append(GenericSensor(
       appliance, "filterRuntime", "Filter Runtime", "filter_runtime",
       SensorDeviceClass.DURATION, UnitOfTime.HOURS, SensorStateClass.TOTAL_INCREASING,
-      converter=lambda v: round(v / 3600, 1),
+      converter=_seconds_to_hours,
     ))
     new_devices.append(GenericSensor(
       appliance, "totalRuntime", "Total Runtime", "total_runtime",
       SensorDeviceClass.DURATION, UnitOfTime.HOURS, SensorStateClass.TOTAL_INCREASING,
-      converter=lambda v: round(v / 3600, 1),
+      converter=_seconds_to_hours,
     ))
     new_devices.append(GenericSensor(
       appliance, "compressorState", "Compressor State", "compressor_state",
