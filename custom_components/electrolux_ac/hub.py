@@ -110,9 +110,9 @@ class Hub:
         return True
 
     async def update_loop(self):
-        """Poll appliance connection state every 30 minutes."""
+        """Poll appliance connection state every 10 minutes."""
         while True:
-            await asyncio.sleep(1800)
+            await asyncio.sleep(600)
             await self.refresh_connection_state()
 
 class Appliance:
