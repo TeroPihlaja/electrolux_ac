@@ -138,3 +138,18 @@ def test_state_update_no_warning_when_alerts_empty(caplog):
             "test_id": {"alerts": [], "applianceState": "running"}
         })
     assert not any("alert" in r.message.lower() for r in caplog.records)
+
+
+@pytest.mark.asyncio
+async def test_discover_appliances_handles_missing_appliance_data():
+    hub = make_hub()
+    hub.online = True
+    hub._client = AsyncMock()
+    hub._client.get_appliances_list.return_value = [
+        {"applianceId": "id1"}  # missing applianceData key
+    ]
+    # Patch ensure_future to prevent background tasks from running
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future", side_effect=lambda c: c.close()):
+        await hub.discover_appliances()
+    assert len(hub.appliances) == 1
+    assert hub.appliances[0].name is None

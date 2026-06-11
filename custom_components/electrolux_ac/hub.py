@@ -72,7 +72,7 @@ class Hub:
         for appliance_data in appliances_raw:
           appliance = Appliance(
               appliance_data.get("applianceId"),
-              appliance_data.get("applianceData").get("applianceName"),
+              appliance_data.get("applianceData", {}).get("applianceName"),
               self,
           )
           appliance._connected = (appliance_data.get("connectionState") == "Connected")
