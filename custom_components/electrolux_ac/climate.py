@@ -80,10 +80,10 @@ class ElectroluxClimate(ClimateEntity):
 
     self._attr_name = self._appliance.name
 
-    if self._appliance._states.get('temperatureRepresentation') == 'celsius':
-      self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
-    else:
+    if self._appliance._states.get('temperatureRepresentation') == 'fahrenheit':
       self._attr_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+    else:
+      self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
 
   async def async_added_to_hass(self) -> None:
     """Run when this Entity has been added to HA."""

@@ -130,10 +130,10 @@ class TemperatureSensor(SensorBase):
 
     _LOGGER.debug("Creating temperature sensor with presentation: %s",
                   self._appliance._states.get('temperatureRepresentation'))
-    if self._appliance._states.get('temperatureRepresentation') == 'celsius':
-      self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
-    else:
+    if self._appliance._states.get('temperatureRepresentation') == 'fahrenheit':
       self._attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
+    else:
+      self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 
   @property
   def native_value(self):

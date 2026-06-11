@@ -78,3 +78,11 @@ def test_hepa_filter_lifetime(mock_appliance):
     )
     assert sensor.native_value == 24064
     assert sensor.unique_id == "test_appliance_id_hepa_filter_lifetime"
+
+
+def test_temperature_sensor_unit_defaults_to_celsius_when_representation_absent(mock_appliance):
+    from custom_components.electrolux_ac.sensor import TemperatureSensor
+    from homeassistant.const import UnitOfTemperature
+    mock_appliance._states = {}
+    sensor = TemperatureSensor(mock_appliance)
+    assert sensor.native_unit_of_measurement == UnitOfTemperature.CELSIUS
