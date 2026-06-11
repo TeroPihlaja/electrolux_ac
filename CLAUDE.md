@@ -24,6 +24,14 @@ Electrolux COMFORT600 portable AC (model `AZUL`, deviceType `PORTABLE_AIR_CONDIT
 API: Electrolux OneApp OCP via `pyelectroluxocp==0.1.3`.
 Live state arrives via WebSocket; initial state polled on setup.
 
+## Releasing
+
+When creating a release:
+1. Add a new section to `CHANGELOG.md` with the version and today's date
+2. Bump `"version"` in `custom_components/electrolux_ac/manifest.json` to match
+3. Commit both files together, then tag and push: `git tag vX.Y.Z && git push github vX.Y.Z`
+4. Create a GitHub release: `gh release create vX.Y.Z --title "vX.Y.Z" --notes "..."`
+
 ## Debug logging
 
 To enable verbose logs, add to `config/configuration.yaml` on the server:
