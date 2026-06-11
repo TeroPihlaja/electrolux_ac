@@ -173,3 +173,21 @@ async def test_execute_command_propagates_api_exception():
     appliance.hub._client.execute_appliance_command = AsyncMock(side_effect=RuntimeError("API error"))
     with pytest.raises(RuntimeError, match="API error"):
         await appliance.execute_command("mode", "cool")
+
+
+@pytest.mark.asyncio
+async def test_wait_for_state_returns_immediately_without_sleeping_when_already_ready():
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance._states = {"applianceState": "running"}
+    appliance.capabilities = {"targetTemperatureC": {"min": 16, "max": 32}}
+    sleep_was_called = False
+
+    async def mock_sleep(_):
+        nonlocal sleep_was_called
+        sleep_was_called = True
+
+    with patch("custom_components.electrolux_ac.hub.asyncio.sleep", side_effect=mock_sleep):
+        await appliance.wait_for_state()
+
+    assert not sleep_was_called

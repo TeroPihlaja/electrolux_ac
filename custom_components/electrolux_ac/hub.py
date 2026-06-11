@@ -143,10 +143,10 @@ class Appliance:
     async def wait_for_state(self):
         STATE_MAX = 5
         for i in range(STATE_MAX):
-            _LOGGER.debug("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
-            await asyncio.sleep(5)
             if self._states and self.capabilities:
                 return
+            _LOGGER.debug("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
+            await asyncio.sleep(5)
         raise ApplianceStateNotReady(
             "Did not receive state information for appliance: %s" % self._id
         )
