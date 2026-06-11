@@ -37,3 +37,11 @@ async def test_turn_off_does_not_mutate_appliance_states(mock_appliance):
     with patch.object(climate, "async_write_ha_state"):
         await climate.async_turn_off()
     assert mock_appliance._states["applianceState"] == "running"
+
+
+@pytest.mark.asyncio
+async def test_set_temperature_no_op_when_temperature_kwarg_absent(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    with patch.object(climate, "async_write_ha_state"):
+        await climate.async_set_temperature()  # no kwargs — simulates HA passing only range bounds
+    mock_appliance.execute_command.assert_not_called()

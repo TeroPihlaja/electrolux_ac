@@ -15,7 +15,7 @@ from homeassistant.components.climate import (
   HVACMode,
 )
 
-from homeassistant.const import PRECISION_WHOLE, UnitOfTemperature
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -268,7 +268,10 @@ class ElectroluxClimate(ClimateEntity):
 
   async def async_set_temperature(self, **kwargs):
     """Set new target temperature."""
-    temperature = int(kwargs['temperature'])
+    temperature = kwargs.get(ATTR_TEMPERATURE)
+    if temperature is None:
+      return
+    temperature = int(temperature)
     _LOGGER.debug(
         "Setting target temperature to %s for device %s",
         temperature,
