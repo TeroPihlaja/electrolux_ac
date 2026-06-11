@@ -1,3 +1,13 @@
+## Pre-commit hook
+
+Always run the test suite before creating a commit. The repo includes a pre-commit hook in `.githooks/`:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Once configured, `git commit` will automatically run the tests and abort on failure.
+
 ## Running tests
 
 ```bash

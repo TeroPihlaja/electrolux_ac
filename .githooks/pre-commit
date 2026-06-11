@@ -1,0 +1,7 @@
+#!/bin/sh
+set -e
+if [ -f .venv/bin/pytest ]; then
+    .venv/bin/pytest tests/ -v
+else
+    echo "pre-commit: .venv not found, skipping tests (run: python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt)"
+fi
