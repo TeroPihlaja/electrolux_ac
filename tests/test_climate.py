@@ -76,3 +76,38 @@ def test_hvac_mode_is_cool_when_mode_uppercase(mock_appliance):
     mock_appliance._states["applianceState"] = "RUNNING"
     mock_appliance._states["mode"] = "COOL"
     assert climate.hvac_mode == HVACMode.COOL
+
+
+async def test_set_swing_mode_updates_local_state_after_successful_command(mock_appliance):
+    """verticalSwing doesn't push live via SSE for all devices - reflect a
+    confirmed successful command locally so the UI doesn't wait for the next poll."""
+    from homeassistant.components.climate import SWING_VERTICAL
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["verticalSwing"] = "off"
+    with patch.object(climate, "async_write_ha_state"):
+        await climate.async_set_swing_mode(SWING_VERTICAL)
+    mock_appliance.execute_command.assert_called_once_with("verticalSwing", "ON")
+    assert mock_appliance._states["verticalSwing"] == "ON"
+    assert climate.swing_mode == SWING_VERTICAL
+
+
+async def test_set_swing_mode_off_updates_local_state_after_successful_command(mock_appliance):
+    from homeassistant.components.climate import SWING_OFF
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["verticalSwing"] = "on"
+    with patch.object(climate, "async_write_ha_state"):
+        await climate.async_set_swing_mode(SWING_OFF)
+    mock_appliance.execute_command.assert_called_once_with("verticalSwing", "OFF")
+    assert mock_appliance._states["verticalSwing"] == "OFF"
+    assert climate.swing_mode == SWING_OFF
+
+
+async def test_set_swing_mode_does_not_update_local_state_when_command_fails(mock_appliance):
+    from homeassistant.components.climate import SWING_VERTICAL
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["verticalSwing"] = "off"
+    mock_appliance.execute_command.side_effect = RuntimeError("API error")
+    with patch.object(climate, "async_write_ha_state"):
+        with pytest.raises(RuntimeError):
+            await climate.async_set_swing_mode(SWING_VERTICAL)
+    assert mock_appliance._states["verticalSwing"] == "off"

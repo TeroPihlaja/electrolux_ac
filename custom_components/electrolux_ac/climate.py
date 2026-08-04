@@ -203,6 +203,9 @@ class ElectroluxClimate(ClimateEntity):
     """Set sleep mode on or off."""
     value = "ON" if preset_mode == PRESET_SLEEP else "OFF"
     await self._appliance.execute_command("sleepMode", value)
+    # sleepMode doesn't push live via SSE on all devices - reflect the
+    # just-confirmed value locally instead of waiting for the next poll.
+    self._appliance._states["sleepMode"] = value
     self.async_write_ha_state()
 
   async def async_set_hvac_mode(self, hvac_mode):
@@ -247,10 +250,14 @@ class ElectroluxClimate(ClimateEntity):
         swing_mode,
         self._attr_name,
     )
+    # verticalSwing doesn't push live via SSE on all devices - reflect the
+    # just-confirmed value locally instead of waiting for the next poll.
     if swing_mode == SWING_OFF:
       await self._appliance.execute_command("verticalSwing", "OFF")
+      self._appliance._states["verticalSwing"] = "OFF"
     elif swing_mode == SWING_VERTICAL:
       await self._appliance.execute_command("verticalSwing", "ON")
+      self._appliance._states["verticalSwing"] = "ON"
     self.async_write_ha_state()
 
   async def async_set_fan_mode(self, fan_mode):

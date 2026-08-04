@@ -55,6 +55,36 @@ async def test_set_preset_none_sends_off(mock_appliance):
     mock_appliance.execute_command.assert_called_once_with("sleepMode", "OFF")
 
 
+async def test_set_preset_sleep_updates_local_state_after_successful_command(mock_appliance):
+    """sleepMode doesn't push live via SSE for all devices - reflect a confirmed
+    successful command locally so the UI doesn't wait for the next poll."""
+    climate = _make_climate(mock_appliance)
+    with patch.object(climate, "async_write_ha_state"):
+        await climate.async_set_preset_mode(PRESET_SLEEP)
+    assert mock_appliance._states["sleepMode"] == "ON"
+    assert climate.preset_mode == PRESET_SLEEP
+
+
+async def test_set_preset_none_updates_local_state_after_successful_command(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["sleepMode"] = "on"
+    with patch.object(climate, "async_write_ha_state"):
+        await climate.async_set_preset_mode(PRESET_NONE)
+    assert mock_appliance._states["sleepMode"] == "OFF"
+    assert climate.preset_mode == PRESET_NONE
+
+
+async def test_set_preset_does_not_update_local_state_when_command_fails(mock_appliance):
+    """If execute_command raises, the exception must propagate and local state
+    must NOT be mutated to reflect a command that was never confirmed sent."""
+    climate = _make_climate(mock_appliance)
+    mock_appliance.execute_command.side_effect = RuntimeError("API error")
+    with patch.object(climate, "async_write_ha_state"):
+        with pytest.raises(RuntimeError):
+            await climate.async_set_preset_mode(PRESET_SLEEP)
+    assert mock_appliance._states["sleepMode"] == "off"
+
+
 def test_preset_modes_list(mock_appliance):
     climate = _make_climate(mock_appliance)
     assert climate.preset_modes == [PRESET_NONE, PRESET_SLEEP]
