@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch, AsyncMock
 import pytest
 from custom_components.electrolux_ac.hub import Hub, Appliance
+from electrolux_group_developer_sdk.client.dto.appliance_state import ApplianceState
 
 
 def make_entry(data=None):
@@ -125,20 +126,16 @@ async def test_discover_appliances_handles_missing_details_and_state():
 def make_appliance(connected=True):
     hub = MagicMock()
     hub._client = MagicMock()
-    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future", side_effect=lambda c: c.close()):
-        appliance = Appliance("test_id", "Test AC", hub)
+    appliance = Appliance("test_id", "Test AC", hub)
+    appliance._sdk_state = ApplianceState(
+        applianceId="test_id",
+        connectionState="connected" if connected else "disconnected",
+        status="enabled",
+        properties={"reported": {"mode": "COOL"}},
+    )
+    appliance._states = appliance._sdk_state.properties["reported"]
     appliance._connected = connected
     return appliance
-
-
-def _make_sdk_state(connection_state="disconnected", reported=None):
-    from electrolux_group_developer_sdk.client.dto.appliance_state import ApplianceState
-    return ApplianceState(
-        applianceId="test_id",
-        connectionState=connection_state,
-        status="ok",
-        properties={"reported": reported or {}},
-    )
 
 
 def test_appliance_online_false_when_not_connected():
@@ -151,12 +148,37 @@ def test_appliance_online_true_when_connected():
     assert appliance.online is True
 
 
-def test_state_update_sets_connected():
-    appliance = make_appliance(connected=False)
+def test_state_update_callback_applies_property_event():
+    appliance = make_appliance(connected=True)
     appliance._callbacks = set()
-    appliance._sdk_state = _make_sdk_state(connection_state="disconnected")
-    appliance.state_update_callback({"property": "connectionState", "value": "connected"})
-    assert appliance._connected is True
+    appliance.state_update_callback({"property": "mode", "value": "DRY"})
+    assert appliance._states["mode"] == "DRY"
+
+
+def test_state_update_callback_updates_connection_state():
+    appliance = make_appliance(connected=True)
+    appliance._callbacks = set()
+    appliance.state_update_callback({"property": "connectionState", "value": "disconnected"})
+    assert appliance._connected is False
+
+
+def test_state_update_callback_publishes_to_registered_callbacks():
+    appliance = make_appliance(connected=True)
+    appliance._callbacks = set()
+    callback = MagicMock()
+    appliance.register_callback(callback)
+    appliance.state_update_callback({"property": "mode", "value": "DRY"})
+    callback.assert_called_once()
+
+
+def test_state_update_callback_ignored_before_initial_state():
+    appliance = make_appliance(connected=True)
+    appliance._sdk_state = None
+    appliance._callbacks = set()
+    callback = MagicMock()
+    appliance.register_callback(callback)
+    appliance.state_update_callback({"property": "mode", "value": "DRY"})
+    callback.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -194,9 +216,12 @@ async def test_wait_for_state_raises_if_states_never_set():
 
 
 def test_state_update_logs_warning_for_non_empty_alerts(caplog):
-    appliance = make_appliance()
+    appliance = make_appliance(connected=True)
+    appliance._sdk_state = ApplianceState(
+        applianceId="test_id", connectionState="connected", status="enabled",
+        properties={"reported": {"alerts": []}},
+    )
     appliance._callbacks = set()
-    appliance._sdk_state = _make_sdk_state(connection_state="connected")
     import logging
     with caplog.at_level(logging.WARNING, logger="custom_components.electrolux_ac.hub"):
         appliance.state_update_callback({"property": "alerts", "value": ["DRAIN_PAN_FULL"]})
@@ -204,9 +229,12 @@ def test_state_update_logs_warning_for_non_empty_alerts(caplog):
 
 
 def test_state_update_no_warning_when_alerts_empty(caplog):
-    appliance = make_appliance()
+    appliance = make_appliance(connected=True)
+    appliance._sdk_state = ApplianceState(
+        applianceId="test_id", connectionState="connected", status="enabled",
+        properties={"reported": {"alerts": ["DRAIN_PAN_FULL"]}},
+    )
     appliance._callbacks = set()
-    appliance._sdk_state = _make_sdk_state(connection_state="connected")
     import logging
     with caplog.at_level(logging.WARNING, logger="custom_components.electrolux_ac.hub"):
         appliance.state_update_callback({"property": "alerts", "value": []})
