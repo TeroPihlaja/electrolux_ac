@@ -43,6 +43,7 @@ class Hub:
         self.appliances = None
         self.online = False
         self._update_task = None
+        self.coordinator = None
 
     @property
     def hub_id(self) -> str:
