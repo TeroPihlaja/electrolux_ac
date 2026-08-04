@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [2.0.0] - 2026-08-04
+## [1.1.0] - 2026-08-04
 
 ### Changed
 - **Breaking:** migrated from `pyelectroluxocp` (archived upstream) to the officially maintained `electrolux-group-developer-sdk`. Authentication now uses an API key + access/refresh token pair generated at https://developer.electrolux.one/ instead of your Electrolux app email/password. Existing installs must remove and re-add the integration with the new credentials.
