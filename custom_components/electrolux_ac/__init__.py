@@ -54,10 +54,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     electrolux_hub = hass.data[DOMAIN][entry.entry_id]
+
+    # Unload platforms first so no entity can still be live to trigger a service call
+    # (and thus execute_command) while the hub is torn down below.
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+
     await electrolux_hub.coordinator.async_shutdown()
     await electrolux_hub.disconnect()
 
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 

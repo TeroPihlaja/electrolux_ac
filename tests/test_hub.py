@@ -123,6 +123,56 @@ async def test_discover_appliances_handles_missing_details_and_state():
     assert appliance.appliance_info is None
 
 
+@pytest.mark.asyncio
+async def test_apply_appliance_data_preserves_info_when_details_transiently_missing():
+    """A later refresh (SSE reconnect / safety-net poll) with details missing must not
+    blank out capabilities/appliance_info that a previous refresh already populated."""
+    hub = make_hub()
+    appliance = Appliance("test_id", "Test AC", hub)
+    hub._apply_appliance_data(appliance, _make_appliance_data(appliance_id="test_id"))
+    assert appliance.appliance_info is not None
+    assert appliance.capabilities == {"targetTemperatureC": {"min": 16, "max": 32}}
+
+    stale_refresh = MagicMock()
+    stale_refresh.appliance.applianceId = "test_id"
+    stale_refresh.details = None
+    stale_refresh.state.properties = {"reported": {"mode": "DRY"}}
+    stale_refresh.state.connectionState = "connected"
+    hub._apply_appliance_data(appliance, stale_refresh)
+
+    assert appliance.appliance_info == {
+        "model": "COMFORT600", "brand": "ELECTROLUX", "deviceType": "PORTABLE_AIR_CONDITIONER",
+    }
+    assert appliance.capabilities == {"targetTemperatureC": {"min": 16, "max": 32}}
+    assert appliance._states == {"mode": "DRY"}
+
+
+@pytest.mark.asyncio
+async def test_full_refresh_is_noop_when_client_disconnected():
+    hub = make_hub()
+    hub._client = None
+    await hub.full_refresh()
+
+
+@pytest.mark.asyncio
+async def test_disconnect_awaits_cancelled_update_task():
+    import asyncio
+
+    hub = make_hub()
+    hub._client = MagicMock()
+    hub.online = True
+
+    async def never_ending():
+        await asyncio.Event().wait()
+
+    hub._update_task = asyncio.ensure_future(never_ending())
+    await hub.disconnect()
+
+    assert hub._update_task is None
+    assert hub._client is None
+    assert hub.online is False
+
+
 def make_appliance(connected=True):
     hub = MagicMock()
     hub._client = MagicMock()
@@ -192,15 +242,16 @@ async def test_wait_for_state_returns_when_states_and_capabilities_ready():
 
 
 @pytest.mark.asyncio
-async def test_wait_for_state_raises_if_capabilities_never_set():
-    from custom_components.electrolux_ac.hub import ApplianceStateNotReady
+async def test_wait_for_state_returns_when_capabilities_empty_but_states_ready():
+    """capabilities is optional - properties that use it (min/max temperature) already
+    fall back to sane defaults, so a persistently-empty capabilities dict must not block
+    entity creation for an appliance that does have real state."""
     appliance = make_appliance()
     appliance._callbacks = set()
     appliance._states = {"applianceState": "running"}
     appliance.capabilities = {}
     with patch("custom_components.electrolux_ac.hub.asyncio.sleep", new_callable=AsyncMock):
-        with pytest.raises(ApplianceStateNotReady):
-            await appliance.wait_for_state()
+        await appliance.wait_for_state()
 
 
 @pytest.mark.asyncio
@@ -256,6 +307,16 @@ async def test_execute_command_propagates_api_exception():
     appliance._callbacks = set()
     appliance.hub._client.send_command = AsyncMock(side_effect=RuntimeError("API error"))
     with pytest.raises(RuntimeError, match="API error"):
+        await appliance.execute_command("mode", "cool")
+
+
+@pytest.mark.asyncio
+async def test_execute_command_raises_when_hub_disconnected():
+    from custom_components.electrolux_ac.hub import ApplianceNotConnected
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance.hub._client = None
+    with pytest.raises(ApplianceNotConnected):
         await appliance.execute_command("mode", "cool")
 
 

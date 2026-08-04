@@ -112,3 +112,45 @@ def test_max_temp_fallback_when_no_capabilities(mock_appliance):
     climate = _make_climate(mock_appliance)
     mock_appliance.capabilities = {}
     assert climate.max_temp == 32
+
+
+def _make_fahrenheit_climate(mock_appliance):
+    mock_appliance._states = {
+        "temperatureRepresentation": "fahrenheit",
+        "sleepMode": "off",
+    }
+    mock_appliance.appliance_info = {
+        "model": "comfort600",
+        "brand": "electrolux",
+        "deviceType": "PORTABLE_AIR_CONDITIONER",
+    }
+    mock_appliance.capabilities = {}
+    return ElectroluxClimate(mock_appliance)
+
+
+def test_min_temp_reads_fahrenheit_capability_for_fahrenheit_device(mock_appliance):
+    climate = _make_fahrenheit_climate(mock_appliance)
+    mock_appliance.capabilities = {
+        "targetTemperatureC": {"min": 16, "max": 32},
+        "targetTemperatureF": {"min": 60, "max": 90},
+    }
+    assert climate.min_temp == 60
+
+
+def test_max_temp_reads_fahrenheit_capability_for_fahrenheit_device(mock_appliance):
+    climate = _make_fahrenheit_climate(mock_appliance)
+    mock_appliance.capabilities = {
+        "targetTemperatureC": {"min": 16, "max": 32},
+        "targetTemperatureF": {"min": 60, "max": 90},
+    }
+    assert climate.max_temp == 90
+
+
+def test_min_temp_fallback_for_fahrenheit_device_when_no_capabilities(mock_appliance):
+    climate = _make_fahrenheit_climate(mock_appliance)
+    assert climate.min_temp == 60
+
+
+def test_max_temp_fallback_for_fahrenheit_device_when_no_capabilities(mock_appliance):
+    climate = _make_fahrenheit_climate(mock_appliance)
+    assert climate.max_temp == 90

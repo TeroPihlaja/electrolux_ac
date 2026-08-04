@@ -5,3 +5,5 @@ if [ -f .venv/bin/pytest ]; then
 else
     echo "pre-commit: .venv not found, skipping tests (run: python3 -m venv .venv && .venv/bin/pip install -r requirements_test.txt)"
 fi
+
+scripts/run_hassfest.sh

@@ -7,7 +7,7 @@ import logging
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from electrolux_group_developer_sdk.client.bad_credentials_exception import BadCredentialsException
 
@@ -39,4 +39,9 @@ class ElectroluxSafetyNetCoordinator(DataUpdateCoordinator[None]):
             await self._hub.test_connection()
         except BadCredentialsException as ex:
             raise ConfigEntryAuthFailed("Electrolux credentials are no longer valid") from ex
-        await self._hub.full_refresh()
+        except Exception as ex:
+            raise UpdateFailed(f"Error verifying Electrolux connection: {ex}") from ex
+        try:
+            await self._hub.full_refresh()
+        except Exception as ex:
+            raise UpdateFailed(f"Error refreshing Electrolux appliance data: {ex}") from ex

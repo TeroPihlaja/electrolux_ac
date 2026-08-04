@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Login information",
-        "description": "Generate an API key, access token, and refresh token at https://developer.electrolux.one/ (log in with your existing Electrolux account, create an API key, then generate a token pair).",
+        "description": "Generate an API key, access token, and refresh token at {portal_url} (log in with your existing Electrolux account, create an API key, then generate a token pair).",
         "data": {
           "api_key": "API key",
           "access_token": "Access token",
@@ -12,7 +12,7 @@
       },
       "reauth_confirm": {
         "title": "Reauthenticate Electrolux AC",
-        "description": "Your Electrolux credentials are no longer valid. Generate a fresh API key, access token, and refresh token at https://developer.electrolux.one/ and enter them below.",
+        "description": "Your Electrolux credentials are no longer valid. Generate a fresh API key, access token, and refresh token at {portal_url} and enter them below.",
         "data": {
           "api_key": "API key",
           "access_token": "Access token",
@@ -23,6 +23,7 @@
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
       "invalid_auth": "[%key:common::config_flow::error::invalid_auth%]",
+      "reauth_account_mismatch": "These credentials belong to a different Electrolux account than the one currently configured. Sign in with the original account, or remove this integration and add it again.",
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {

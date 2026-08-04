@@ -6,7 +6,7 @@ Always run the test suite before creating a commit. The repo includes a pre-comm
 git config core.hooksPath .githooks
 ```
 
-Once configured, `git commit` will automatically run the tests and abort on failure.
+Once configured, `git commit` will automatically run the tests, then Hassfest validation, and abort on failure.
 
 ## Running tests
 
@@ -20,6 +20,19 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements_test.txt
 .venv/bin/pip install electrolux-group-developer-sdk==0.6.1
 ```
+
+## Local CI checks
+
+The `Validate` GitHub Actions workflow (`.github/workflows/validate.yml`) runs Hassfest and HACS
+validation via Docker images. Both can be reproduced locally (needs Docker — e.g. `brew install
+--cask orbstack`):
+
+```bash
+scripts/run_hassfest.sh          # same check as CI; also runs automatically pre-commit
+scripts/run_hacs_validation.sh   # checks the *pushed* state on GitHub (releases, topics) — run after pushing/tagging, needs `gh auth login`
+```
+
+If Docker isn't installed/running, both scripts print a message and exit 0 (skip) rather than blocking the commit.
 
 ## Key files
 

@@ -66,6 +66,10 @@ class Hub:
         _LOGGER.debug("Disconnecting from Electrolux hub")
         if self._update_task is not None:
             self._update_task.cancel()
+            try:
+                await self._update_task
+            except asyncio.CancelledError:
+                pass
             self._update_task = None
         self._client = None
         self.online = False
@@ -88,22 +92,22 @@ class Hub:
             self._update_task = asyncio.ensure_future(self._start_streaming())
 
     def _apply_appliance_data(self, appliance: "Appliance", data) -> None:
-        appliance.capabilities = data.details.capabilities if data.details else {}
+        # data.details is transiently absent on some refreshes (SSE reconnect, safety-net
+        # poll); keep the last-known capabilities/appliance_info rather than blanking an
+        # already-populated entity back to None/{}.
+        if data.details:
+            appliance.capabilities = data.details.capabilities
+            appliance.appliance_info = {
+                "model": data.details.applianceInfo.model,
+                "brand": data.details.applianceInfo.brand,
+                "deviceType": data.details.applianceInfo.deviceType,
+            }
         appliance._sdk_state = data.state
         appliance._states = (
             data.state.properties.get("reported", {}) if data.state else {}
         )
         appliance._connected = bool(
             data.state and data.state.connectionState.lower() == "connected"
-        )
-        appliance.appliance_info = (
-            {
-                "model": data.details.applianceInfo.model,
-                "brand": data.details.applianceInfo.brand,
-                "deviceType": data.details.applianceInfo.deviceType,
-            }
-            if data.details
-            else None
         )
 
     async def _start_streaming(self):
@@ -116,6 +120,8 @@ class Hub:
 
     async def full_refresh(self):
         """Re-fetch full appliance data. Used on every SSE (re)connect and by the safety-net coordinator."""
+        if self._client is None:
+            return
         appliances_data = await self._client.get_appliance_data()
         by_id = {data.appliance.applianceId: data for data in appliances_data}
         for appliance in self.appliances or []:
@@ -149,9 +155,13 @@ class Appliance:
         self._connected = False
 
     async def wait_for_state(self):
+        # capabilities is intentionally not required here: it's optional (properties that
+        # use it, like min/max temperature, already fall back to sane defaults), and
+        # requiring it caused appliances with valid state but transiently-missing details
+        # to be skipped forever.
         STATE_MAX = 5
         for i in range(STATE_MAX):
-            if self._states and self.capabilities:
+            if self._states:
                 return
             _LOGGER.debug("Waiting for initial state: %d/%d", i + 1, STATE_MAX)
             await asyncio.sleep(5)
@@ -183,7 +193,12 @@ class Appliance:
         return self._id
 
     async def execute_command(self, command: str, value: str):
-        await self.hub._client.send_command(self._id, {command: value})
+        client = self.hub._client
+        if client is None:
+            raise ApplianceNotConnected(
+                "Cannot send command %s to appliance %s: not connected" % (command, self._id)
+            )
+        await client.send_command(self._id, {command: value})
         return True
 
     def register_callback(self, callback: Callable[[], None]):
@@ -207,3 +222,7 @@ class Appliance:
 
 class ApplianceStateNotReady(exceptions.HomeAssistantError):
     """Error to indicate we cannot find state information for appliance."""
+
+
+class ApplianceNotConnected(exceptions.HomeAssistantError):
+    """Error to indicate a command was attempted while the hub is disconnected."""

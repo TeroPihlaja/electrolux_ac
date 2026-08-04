@@ -15,7 +15,7 @@ from homeassistant.components.climate import (
   HVACMode,
 )
 
-from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE, UnitOfTemperature
+from homeassistant.const import ATTR_TEMPERATURE, PRECISION_WHOLE
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -26,6 +26,7 @@ from .const import (
   DOMAIN,
   TARGET_TEMPERATURE_STEP
 )
+from .util import temperature_unit, unit_suffix
 
 import logging
 
@@ -80,10 +81,7 @@ class ElectroluxClimate(ClimateEntity):
 
     self._attr_name = self._appliance.name
 
-    if (self._appliance._states.get('temperatureRepresentation') or '').lower() == 'fahrenheit':
-      self._attr_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
-    else:
-      self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
+    self._attr_unit_of_measurement = temperature_unit(self._appliance._states)
 
   async def async_added_to_hass(self) -> None:
     """Run when this Entity has been added to HA."""
@@ -114,11 +112,8 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def current_temperature(self):
-    if self._attr_unit_of_measurement == UnitOfTemperature.CELSIUS:
-      temperature = self._appliance._states.get('ambientTemperatureC')
-    else: 
-      temperature = self._appliance._states.get('ambientTemperatureF')
-    return temperature
+    suffix = unit_suffix(self._attr_unit_of_measurement)
+    return self._appliance._states.get(f'ambientTemperature{suffix}')
 
   @property
   def fan_mode(self) -> str | None:
@@ -159,18 +154,20 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def min_temp(self) -> float:
-    return self._appliance.capabilities.get("targetTemperatureC", {}).get("min", 16)
+    suffix = unit_suffix(self._attr_unit_of_measurement)
+    default = 60 if suffix == "F" else 16
+    return self._appliance.capabilities.get(f"targetTemperature{suffix}", {}).get("min", default)
 
   @property
   def max_temp(self) -> float:
-    return self._appliance.capabilities.get("targetTemperatureC", {}).get("max", 32)
+    suffix = unit_suffix(self._attr_unit_of_measurement)
+    default = 90 if suffix == "F" else 32
+    return self._appliance.capabilities.get(f"targetTemperature{suffix}", {}).get("max", default)
 
   @property
   def target_temperature(self) -> float | None:
-    if self._attr_unit_of_measurement == UnitOfTemperature.FAHRENHEIT:
-      return self._appliance._states.get('targetTemperatureF')
-    else:
-      return self._appliance._states.get('targetTemperatureC')
+    suffix = unit_suffix(self._attr_unit_of_measurement)
+    return self._appliance._states.get(f'targetTemperature{suffix}')
 
   @property
   def swing_mode(self) -> str | None:
@@ -188,10 +185,7 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def temperature_unit(self) -> str:
-    if self._attr_unit_of_measurement == UnitOfTemperature.FAHRENHEIT:
-      return UnitOfTemperature.FAHRENHEIT
-    else:
-      return UnitOfTemperature.CELSIUS
+    return self._attr_unit_of_measurement
 
   @property
   def preset_mode(self) -> str:
@@ -288,8 +282,6 @@ class ElectroluxClimate(ClimateEntity):
         temperature,
         self._attr_name,
     )
-    if self._attr_unit_of_measurement == UnitOfTemperature.FAHRENHEIT:
-      await self._appliance.execute_command("targetTemperatureF", temperature)
-    else:
-      await self._appliance.execute_command("targetTemperatureC", temperature)
+    suffix = unit_suffix(self._attr_unit_of_measurement)
+    await self._appliance.execute_command(f"targetTemperature{suffix}", temperature)
     self.async_write_ha_state()

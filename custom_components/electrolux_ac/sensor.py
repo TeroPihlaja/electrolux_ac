@@ -3,12 +3,12 @@
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 
 from homeassistant.const import (
-    UnitOfTemperature,
     UnitOfTime,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
 )
 
 from .const import DOMAIN
+from .util import temperature_unit, unit_suffix
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -130,19 +130,14 @@ class TemperatureSensor(SensorBase):
     self._attr_unique_id = f"{self._appliance.appliance_id}_temperature"
     self._attr_name = f"{self._appliance.name} Temperature"
 
+    self._attr_native_unit_of_measurement = temperature_unit(self._appliance._states)
     _LOGGER.debug("Creating temperature sensor with presentation: %s",
                   self._appliance._states.get('temperatureRepresentation'))
-    if (self._appliance._states.get('temperatureRepresentation') or '').lower() == 'fahrenheit':
-      self._attr_native_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
-    else:
-      self._attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
 
   @property
   def native_value(self):
     """Return the state of the sensor."""
-    if self._attr_native_unit_of_measurement == UnitOfTemperature.CELSIUS:
-      temperature = self._appliance._states.get('ambientTemperatureC')
-    else:
-      temperature = self._appliance._states.get('ambientTemperatureF')
+    suffix = unit_suffix(self._attr_native_unit_of_measurement)
+    temperature = self._appliance._states.get(f'ambientTemperature{suffix}')
     _LOGGER.debug("Returning temperature: %s", temperature)
     return temperature
