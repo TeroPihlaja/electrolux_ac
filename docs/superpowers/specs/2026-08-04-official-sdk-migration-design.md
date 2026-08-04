@@ -14,7 +14,9 @@ This is a breaking change to how the integration authenticates. Acceptable becau
 
 ## Scope boundary
 
-`hub.py` and `config_flow.py` are rewritten. `climate.py` and `sensor.py` are **not** expected to change: the SDK's `ApplianceDetails.capabilities` and `ApplianceState.properties` are raw `dict[str, Any]`, matching the shape the old API already returned (same underlying Electrolux data model, different transport). `Appliance` continues to expose `._states` (dict) and `.capabilities` (dict) exactly as it does today.
+`hub.py` and `config_flow.py` are rewritten. `climate.py` and `sensor.py` are **not** expected to need a rewrite: the SDK's `ApplianceDetails.capabilities` and `ApplianceState.properties` are raw `dict[str, Any]`, matching the shape the old API already returned (same underlying Electrolux data model, different transport). `Appliance` continues to expose `._states` (dict) and `.capabilities` (dict) exactly as it does today.
+
+One narrow exception: the SDK's own test fixtures use uppercase enum values (`"mode": "OFF"`, `"temperatureRepresentation": "CELSIUS"`) where the old API used lowercase (`"mode": "cool"`, confirmed from live logs). Both `climate.py` and `sensor.py` do exact-lowercase string comparisons against `_states` values (e.g. `_states.get('temperatureRepresentation') == 'fahrenheit'`). To be correct regardless of which casing the real API actually returns, every such comparison in both files is made case-insensitive (`.lower()` the retrieved value before comparing). This is the one change to those two files.
 
 ## Authentication model change
 
