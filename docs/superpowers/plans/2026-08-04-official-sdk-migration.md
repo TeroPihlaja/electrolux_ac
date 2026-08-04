@@ -59,13 +59,16 @@ pytest-homeassistant-custom-component
 electrolux-group-developer-sdk==0.6.1
 ```
 
-- [ ] **Step 3: Update `const.py`**
+- [ ] **Step 3: Add the new constants to `const.py`**
+
+**Keep `CONF_COUNTRY_CODE` for now** — `config_flow.py` and `__init__.py` still import it and aren't rewritten until Tasks 7 and 8. Removing it here would break every test in the suite: `tests/test_hub.py` does `from custom_components.electrolux_ac.hub import Hub, Appliance`, and importing any submodule of a package always runs that package's `__init__.py` first — so even though `hub.py` itself never references `CONF_COUNTRY_CODE`, `test_hub.py` would still fail to collect if `__init__.py`'s import breaks. This constant is removed in Task 8, once `__init__.py` no longer needs it.
 
 Replace the full contents of `custom_components/electrolux_ac/const.py` with:
 
 ```python
 DOMAIN = "electrolux_ac"
 TARGET_TEMPERATURE_STEP = 1
+CONF_COUNTRY_CODE = "country_code"
 CONF_API_KEY = "api_key"
 CONF_ACCESS_TOKEN = "access_token"
 CONF_REFRESH_TOKEN = "refresh_token"
@@ -74,9 +77,9 @@ CONF_REFRESH_TOKEN = "refresh_token"
 - [ ] **Step 4: Run the full test suite to confirm nothing broke**
 
 Run: `.venv/bin/pytest tests/ -v`
-Expected: FAIL — `config_flow.py` and `__init__.py` still do `from .const import DOMAIN, CONF_COUNTRY_CODE`, which no longer exists, so both modules fail to import (collection errors in `test_config_flow.py`). `hub.py` doesn't import `CONF_COUNTRY_CODE` at all (it took `country_code` as a plain constructor parameter instead), so `test_hub.py` still collects fine at this point.
+Expected: all 41 existing tests still PASS — this step only adds new constants, nothing is removed or rewritten yet, so nothing breaks.
 
-This is expected. `config_flow.py`'s import is fixed in Task 7, `__init__.py`'s in Task 8. Do not commit yet — continue directly to Task 2's first step.
+Do not commit yet — continue directly to Task 2's first step.
 
 ---
 
@@ -1093,6 +1096,8 @@ git commit -m "feat: rewrite config flow for api_key/access_token/refresh_token,
 
 **Files:**
 - Modify: `custom_components/electrolux_ac/__init__.py` (full rewrite)
+- Modify: `custom_components/electrolux_ac/hub.py` (add `self.coordinator = None`)
+- Modify: `custom_components/electrolux_ac/const.py` (remove `CONF_COUNTRY_CODE`, now unused)
 
 **Interfaces:**
 - Consumes: `Hub(hass, entry)` (Task 2), `Hub.discover_appliances()` (Task 3), `ElectroluxSafetyNetCoordinator(hass, entry, hub)` (Task 6), `BadCredentialsException`, `electrolux_group_developer_sdk.client.client_exception.ApplianceClientException`
@@ -1173,15 +1178,27 @@ to:
         self.coordinator = None
 ```
 
-- [ ] **Step 3: Run the full test suite**
+- [ ] **Step 3: Remove `CONF_COUNTRY_CODE` from `const.py`**
+
+Nothing imports it anymore — `config_flow.py` stopped in Task 7, and `__init__.py`'s rewrite in Step 1 above stopped too. Replace the full contents of `custom_components/electrolux_ac/const.py` with:
+
+```python
+DOMAIN = "electrolux_ac"
+TARGET_TEMPERATURE_STEP = 1
+CONF_API_KEY = "api_key"
+CONF_ACCESS_TOKEN = "access_token"
+CONF_REFRESH_TOKEN = "refresh_token"
+```
+
+- [ ] **Step 4: Run the full test suite**
 
 Run: `.venv/bin/pytest tests/ -v`
 Expected: all tests PASS (this task has no dedicated unit tests, matching existing convention — verify by running the full suite and confirming no regressions).
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add custom_components/electrolux_ac/__init__.py custom_components/electrolux_ac/hub.py
+git add custom_components/electrolux_ac/__init__.py custom_components/electrolux_ac/hub.py custom_components/electrolux_ac/const.py
 git commit -m "feat: wire Hub construction, safety-net coordinator, and auth-failure handling in async_setup_entry"
 ```
 
