@@ -242,6 +242,15 @@ def test_state_update_no_warning_when_alerts_empty(caplog):
 
 
 @pytest.mark.asyncio
+async def test_execute_command_calls_send_command():
+    appliance = make_appliance()
+    appliance._callbacks = set()
+    appliance.hub._client.send_command = AsyncMock()
+    await appliance.execute_command("mode", "cool")
+    appliance.hub._client.send_command.assert_called_once_with("test_id", {"mode": "cool"})
+
+
+@pytest.mark.asyncio
 async def test_execute_command_propagates_api_exception():
     appliance = make_appliance()
     appliance._callbacks = set()
