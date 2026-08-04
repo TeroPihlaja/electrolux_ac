@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.2.0] - 2026-08-04
+
+### Added
+- Reauthentication now sets and validates a unique ID per Electrolux account, rejecting credentials for a different account instead of silently repointing an existing entry (and its entities) at it.
+
+### Fixed
+- `min_temp`/`max_temp` always read the Celsius capability regardless of the device's configured unit, giving Fahrenheit devices a wrong slider range.
+- `appliance_info` could revert to `None` on a transient refresh gap (SSE reconnect / 10-minute safety-net poll), crashing `device_info` on the next read.
+- Unload could race a live entity's service call against an already-disconnected hub; platforms now unload before the hub disconnects, and `execute_command`/`full_refresh` no longer raise `AttributeError` if the client is already gone.
+- Appliances with valid state but transiently-missing capability details were skipped from setup permanently instead of just missing optional capability data.
+- The safety-net coordinator now classifies non-auth connectivity failures as `UpdateFailed` instead of letting them propagate unclassified.
+- Config flow descriptions no longer embed raw URLs (fixes Hassfest translation validation).
+
 ## [1.1.0] - 2026-08-04
 
 ### Changed

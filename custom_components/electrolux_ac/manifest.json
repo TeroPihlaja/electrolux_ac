@@ -9,5 +9,5 @@
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/TeroPihlaja/electrolux_ac/issues",
   "requirements": ["electrolux-group-developer-sdk==0.6.1"],
-  "version": "1.1.0"
+  "version": "1.2.0"
 }
