@@ -7,6 +7,7 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 
 from electrolux_group_developer_sdk.client.bad_credentials_exception import BadCredentialsException
 from electrolux_group_developer_sdk.client.client_exception import ApplianceClientException
+from electrolux_group_developer_sdk.client.failed_connection_exception import FailedConnectionException
 
 from . import hub
 from .const import DOMAIN
@@ -23,17 +24,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = electrolux_hub
 
     try:
+        # test_connection() is the only SDK call that reliably distinguishes
+        # invalid/revoked credentials (BadCredentialsException) from a
+        # transient connectivity failure - discover_appliances() alone wraps
+        # a dead refresh token into a generic ApplianceClientException and
+        # would silently retry forever via ConfigEntryNotReady instead of
+        # triggering reauth. Call it first, before anything else.
+        await electrolux_hub.test_connection()
         await electrolux_hub.discover_appliances()
     except BadCredentialsException as ex:
         await electrolux_hub.disconnect()
         raise ConfigEntryAuthFailed("Electrolux credentials are invalid") from ex
-    except ApplianceClientException as ex:
+    except (ApplianceClientException, FailedConnectionException) as ex:
         _LOGGER.error("Error connecting to Electrolux: %s", ex)
         await electrolux_hub.disconnect()
         raise ConfigEntryNotReady(f"Error connecting to Electrolux: {ex}") from ex
 
     coordinator = ElectroluxSafetyNetCoordinator(hass, entry, electrolux_hub)
-    await coordinator.async_config_entry_first_refresh()
+    try:
+        await coordinator.async_config_entry_first_refresh()
+    except Exception:
+        await electrolux_hub.disconnect()
+        raise
     electrolux_hub.coordinator = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
