@@ -1,56 +1,64 @@
-"""A demonstration 'hub' that connects several devices."""
+"""Hub (API connection) and Appliance (state + callbacks) for the Electrolux AC integration."""
 from __future__ import annotations
 
 import asyncio
 import json
 
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant import exceptions
 from collections.abc import Callable
 
-from pyelectroluxocp import OneAppApi
+from electrolux_group_developer_sdk.auth.token_manager import TokenManager
+from electrolux_group_developer_sdk.client.appliance_client import (
+    ApplianceClient,
+    apply_sse_update,
+)
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
-# Capabilities we handle or knowingly ignore. Anything else is logged as unsupported.
-_KNOWN_CAPABILITIES = {
-    # Controlled by the climate entity
-    "executeCommand", "targetTemperatureC", "fanSpeedSetting",
-    "mode", "verticalSwing", "sleepMode",
-    # Read-only / exposed as sensors
-    "applianceState", "fanSpeedState", "networkInterface", "ambientTemperatureC",
-    "alerts",
-    # Known but not yet implemented
-    "uiLockMode", "startTime", "stopTime",
-}
-
 _ISSUE_TRACKER = "https://github.com/TeroPihlaja/electrolux_ac/issues"
 
 class Hub:
-    def __init__(self, hass: HomeAssistant, email: str, password: str, country_code: str = "fi"):
-        _LOGGER.debug("Creating Electrolux hub with email %s", email)
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+        _LOGGER.debug("Creating Electrolux hub for entry %s", entry.entry_id)
 
-        self._email = email
-        self._password = password
         self._hass = hass
-        self._name = email
-        self._id = email.lower()
-        self._client = None
+        self._entry = entry
+        self._id = entry.entry_id
+        self._client: ApplianceClient | None = None
         self.appliances = None
         self.online = False
-        self._country_code = country_code
         self._update_task = None
+        self.coordinator = None
 
     @property
     def hub_id(self) -> str:
         """ID for dummy hub."""
         return self._id
 
+    def _persist_tokens(self, access_token: str, refresh_token: str, api_key: str) -> None:
+        """Persist rotated tokens so they survive a restart."""
+        self._hass.config_entries.async_update_entry(
+            self._entry,
+            data={
+                "api_key": api_key,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+            },
+        )
+
     async def connect(self) -> any:
         """Connect to the hub."""
         _LOGGER.debug("Connecting to Electrolux hub")
-        self._client = OneAppApi(self._email, self._password, self._country_code, logger=_LOGGER)
+        token_manager = TokenManager(
+            access_token=self._entry.data["access_token"],
+            refresh_token=self._entry.data["refresh_token"],
+            api_key=self._entry.data["api_key"],
+            on_token_update=self._persist_tokens,
+        )
+        self._client = ApplianceClient(token_manager=token_manager)
         self.online = True
 
     async def disconnect(self):
@@ -59,86 +67,86 @@ class Hub:
         if self._update_task is not None:
             self._update_task.cancel()
             self._update_task = None
-        if self._client is not None:
-            await self._client.close()
         self._client = None
         self.online = False
 
     async def discover_appliances(self):
         if not self.online:
-          await self.connect()
-        appliances_raw = await self._client.get_appliances_list()
+            await self.connect()
+        appliances_data = await self._client.get_appliance_data()
         appliances_out = []
-        for appliance_data in appliances_raw:
-          appliance = Appliance(
-              appliance_data.get("applianceId"),
-              appliance_data.get("applianceData", {}).get("applianceName"),
-              self,
-          )
-          appliance._connected = (appliance_data.get("connectionState") == "Connected")
-          appliances_out.append(appliance)
+        for data in appliances_data:
+            appliance = Appliance(
+                data.appliance.applianceId,
+                data.appliance.applianceName,
+                self,
+            )
+            self._apply_appliance_data(appliance, data)
+            appliances_out.append(appliance)
         self.appliances = appliances_out
         if self._update_task is None:
-            self._update_task = asyncio.ensure_future(self.update_loop())
+            self._update_task = asyncio.ensure_future(self._start_streaming())
 
-    async def refresh_connection_state(self):
-        """Poll connectionState for all known appliances and update _connected in-place."""
-        try:
-            appliances_raw = await self._client.get_appliances_list()
-            state_by_id = {a.get("applianceId"): a for a in appliances_raw}
-            for appliance in (self.appliances or []):
-                raw = state_by_id.get(appliance.appliance_id, {})
-                was_connected = appliance._connected
-                appliance._connected = (raw.get("connectionState") == "Connected")
-                if appliance._connected != was_connected:
-                    _LOGGER.debug(
-                        "Appliance %s is now %s",
-                        appliance.appliance_id,
-                        "connected" if appliance._connected else "disconnected",
-                    )
-                    appliance.publish_updates()
-        except Exception:
-            _LOGGER.debug("Failed to refresh connection state", exc_info=True)
+    def _apply_appliance_data(self, appliance: "Appliance", data) -> None:
+        appliance.capabilities = data.details.capabilities if data.details else {}
+        appliance._sdk_state = data.state
+        appliance._states = (
+            data.state.properties.get("reported", {}) if data.state else {}
+        )
+        appliance._connected = bool(
+            data.state and data.state.connectionState.lower() == "connected"
+        )
+        appliance.appliance_info = (
+            {
+                "model": data.details.applianceInfo.model,
+                "brand": data.details.applianceInfo.brand,
+                "deviceType": data.details.applianceInfo.deviceType,
+            }
+            if data.details
+            else None
+        )
 
-    async def test_connection(self) -> bool:
-        try:
-          if not self.online:
+    async def _start_streaming(self):
+        """Register SSE listeners for all appliances and open the livestream."""
+        for appliance in self.appliances or []:
+            self._client.add_listener(appliance.appliance_id, appliance.state_update_callback)
+        await self._client.start_event_stream(
+            do_on_livestream_opening_list=[self.full_refresh]
+        )
+
+    async def full_refresh(self):
+        """Re-fetch full appliance data. Used on every SSE (re)connect and by the safety-net coordinator."""
+        appliances_data = await self._client.get_appliance_data()
+        by_id = {data.appliance.applianceId: data for data in appliances_data}
+        for appliance in self.appliances or []:
+            data = by_id.get(appliance.appliance_id)
+            if data is not None:
+                self._apply_appliance_data(appliance, data)
+                appliance.publish_updates()
+
+    async def test_connection(self) -> None:
+        """Verify credentials are valid. Raises BadCredentialsException if not."""
+        if not self.online:
             await self.connect()
-        except Exception:  # pylint: disable=broad-except
-          _LOGGER.exception("Unable to connect")
-          return False
-        return True
+        await self._client.test_connection()
 
-    async def update_loop(self):
-        """Poll appliance connection state every 10 minutes."""
-        while True:
-            await asyncio.sleep(600)
-            await self.refresh_connection_state()
 
 class Appliance:
-    """Dummy appliance (device for HA) for Hello World example."""
+    """Represents one Electrolux appliance."""
 
     def __init__(self, applianceid: str, name: str, hub: Hub):
-        """Init dummy appliance."""
+        """Init appliance. Data (capabilities/_states/appliance_info) is populated by the caller."""
         self._id = applianceid
         self.hub = hub
         self.name = name
         self._callbacks = set()
 
         self.capabilities = {}
-
         self._states = {}
+        self._sdk_state = None
         self.appliance_info = None
 
-        self.manufacturer = None
-        self.firmware_version = None
-        self.model = None
-
-        self._following_changes = False
         self._connected = False
-
-        asyncio.ensure_future(self.update_appliance_info())
-        asyncio.ensure_future(self.watch_for_state_updates())
 
     async def wait_for_state(self):
         STATE_MAX = 5
@@ -151,49 +159,23 @@ class Appliance:
             "Did not receive state information for appliance: %s" % self._id
         )
 
-    async def watch_for_state_updates(self):
-      if self._following_changes:
-        return
-      await self.hub._client.watch_for_appliance_state_updates([self._id], self.state_update_callback)
-      self._following_changes = True
-
-    def state_update_callback(self, data):
-      _LOGGER.debug("appliance state updated: %s", json.dumps(data))
-      if self._id not in data:
-        return
-      self._connected = True
-      for key, value in data[self._id].items():
-        self._states[key] = value
-      alerts = self._states.get("alerts")
-      if alerts:
-          _LOGGER.warning(
-              "Appliance %s has active alerts: %s — "
-              "please report the format at %s",
-              self._id, alerts, _ISSUE_TRACKER,
-          )
-      _LOGGER.debug("current state: %s", self._states)
-      self.publish_updates()
-
-    async def update_appliance_info(self):
-      info = await self.hub._client.get_appliances_info([self._id])
-      _LOGGER.debug("appliance info: %s", json.dumps(info))
-      if not info:
-          _LOGGER.warning("No info returned for appliance %s — skipping info/capabilities fetch", self._id)
-          return
-      self.appliance_info = info[0]
-
-      capab = await self.hub._client.get_appliance_capabilities(self._id)
-      _LOGGER.debug("appliance capabilities: %s", json.dumps(capab))
-
-      self.capabilities = capab
-
-      unknown = sorted(set(capab.keys()) - _KNOWN_CAPABILITIES)
-      for key in unknown:
-          _LOGGER.warning(
-              "Unsupported capability '%s' found on appliance %s. "
-              "Please open an issue at %s so it can be added.",
-              key, self._id, _ISSUE_TRACKER,
-          )
+    def state_update_callback(self, event: dict) -> None:
+        """Handle a single SSE property-update event for this appliance."""
+        _LOGGER.debug("appliance state event: %s", json.dumps(event))
+        if self._sdk_state is None:
+            return
+        self._sdk_state = apply_sse_update(self._sdk_state, event)
+        self._states = self._sdk_state.properties.get("reported", {})
+        self._connected = self._sdk_state.connectionState.lower() == "connected"
+        alerts = self._states.get("alerts")
+        if alerts:
+            _LOGGER.warning(
+                "Appliance %s has active alerts: %s — "
+                "please report the format at %s",
+                self._id, alerts, _ISSUE_TRACKER,
+            )
+        _LOGGER.debug("current state: %s", self._states)
+        self.publish_updates()
 
     @property
     def appliance_id(self) -> str:
@@ -201,8 +183,8 @@ class Appliance:
         return self._id
 
     async def execute_command(self, command: str, value: str):
-      await self.hub._client.execute_appliance_command(self._id, {command: value})
-      return True
+        await self.hub._client.send_command(self._id, {command: value})
+        return True
 
     def register_callback(self, callback: Callable[[], None]):
         """Register callback, called when appliance changes state."""
@@ -221,6 +203,7 @@ class Appliance:
     def online(self) -> bool:
         """Return True if the appliance is connected to the cloud."""
         return self._connected
+
 
 class ApplianceStateNotReady(exceptions.HomeAssistantError):
     """Error to indicate we cannot find state information for appliance."""

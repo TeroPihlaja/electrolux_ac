@@ -1,3 +1,4 @@
 pytest
 pytest-asyncio
 pytest-homeassistant-custom-component
+electrolux-group-developer-sdk==0.6.1
