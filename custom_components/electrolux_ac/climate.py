@@ -201,7 +201,7 @@ class ElectroluxClimate(ClimateEntity):
 
   async def async_set_preset_mode(self, preset_mode: str) -> None:
     """Set sleep mode on or off."""
-    value = "on" if preset_mode == PRESET_SLEEP else "off"
+    value = "ON" if preset_mode == PRESET_SLEEP else "OFF"
     await self._appliance.execute_command("sleepMode", value)
     self.async_write_ha_state()
 
@@ -217,9 +217,9 @@ class ElectroluxClimate(ClimateEntity):
       return
     await self.async_turn_on()
     if hvac_mode == HVACMode.FAN_ONLY:
-      await self._appliance.execute_command("mode", "fanOnly")
+      await self._appliance.execute_command("mode", "FANONLY")
     else:
-      await self._appliance.execute_command("mode", hvac_mode)
+      await self._appliance.execute_command("mode", hvac_mode.upper())
     self.async_write_ha_state()
 
   async def async_turn_on(self):
@@ -248,9 +248,9 @@ class ElectroluxClimate(ClimateEntity):
         self._attr_name,
     )
     if swing_mode == SWING_OFF:
-      await self._appliance.execute_command("verticalSwing", "off")
+      await self._appliance.execute_command("verticalSwing", "OFF")
     elif swing_mode == SWING_VERTICAL:
-      await self._appliance.execute_command("verticalSwing", "on")
+      await self._appliance.execute_command("verticalSwing", "ON")
     self.async_write_ha_state()
 
   async def async_set_fan_mode(self, fan_mode):
@@ -261,13 +261,13 @@ class ElectroluxClimate(ClimateEntity):
         self._attr_name,
     )
     if fan_mode == FAN_AUTO:
-      await self._appliance.execute_command("fanSpeedSetting", "auto")
+      await self._appliance.execute_command("fanSpeedSetting", "AUTO")
     elif fan_mode == FAN_LOW:
-      await self._appliance.execute_command("fanSpeedSetting", "low")
+      await self._appliance.execute_command("fanSpeedSetting", "LOW")
     elif fan_mode == FAN_MEDIUM:
-      await self._appliance.execute_command("fanSpeedSetting", "middle")
+      await self._appliance.execute_command("fanSpeedSetting", "MIDDLE")
     elif fan_mode == FAN_HIGH:
-      await self._appliance.execute_command("fanSpeedSetting", "high")
+      await self._appliance.execute_command("fanSpeedSetting", "HIGH")
     self.async_write_ha_state()
 
   async def async_set_temperature(self, **kwargs):

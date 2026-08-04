@@ -45,14 +45,14 @@ async def test_set_preset_sleep_sends_on(mock_appliance):
     climate = _make_climate(mock_appliance)
     with patch.object(climate, "async_write_ha_state"):
         await climate.async_set_preset_mode(PRESET_SLEEP)
-    mock_appliance.execute_command.assert_called_once_with("sleepMode", "on")
+    mock_appliance.execute_command.assert_called_once_with("sleepMode", "ON")
 
 
 async def test_set_preset_none_sends_off(mock_appliance):
     climate = _make_climate(mock_appliance)
     with patch.object(climate, "async_write_ha_state"):
         await climate.async_set_preset_mode(PRESET_NONE)
-    mock_appliance.execute_command.assert_called_once_with("sleepMode", "off")
+    mock_appliance.execute_command.assert_called_once_with("sleepMode", "OFF")
 
 
 def test_preset_modes_list(mock_appliance):
