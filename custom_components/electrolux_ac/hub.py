@@ -5,10 +5,15 @@ import asyncio
 import json
 
 from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
 from homeassistant import exceptions
 from collections.abc import Callable
 
-from pyelectroluxocp import OneAppApi
+from electrolux_group_developer_sdk.auth.token_manager import TokenManager
+from electrolux_group_developer_sdk.client.appliance_client import (
+    ApplianceClient,
+    apply_sse_update,
+)
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -28,18 +33,15 @@ _KNOWN_CAPABILITIES = {
 _ISSUE_TRACKER = "https://github.com/TeroPihlaja/electrolux_ac/issues"
 
 class Hub:
-    def __init__(self, hass: HomeAssistant, email: str, password: str, country_code: str = "fi"):
-        _LOGGER.debug("Creating Electrolux hub with email %s", email)
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry):
+        _LOGGER.debug("Creating Electrolux hub for entry %s", entry.entry_id)
 
-        self._email = email
-        self._password = password
         self._hass = hass
-        self._name = email
-        self._id = email.lower()
-        self._client = None
+        self._entry = entry
+        self._id = entry.entry_id
+        self._client: ApplianceClient | None = None
         self.appliances = None
         self.online = False
-        self._country_code = country_code
         self._update_task = None
 
     @property
@@ -47,10 +49,27 @@ class Hub:
         """ID for dummy hub."""
         return self._id
 
+    def _persist_tokens(self, access_token: str, refresh_token: str, api_key: str) -> None:
+        """Persist rotated tokens so they survive a restart."""
+        self._hass.config_entries.async_update_entry(
+            self._entry,
+            data={
+                "api_key": api_key,
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+            },
+        )
+
     async def connect(self) -> any:
         """Connect to the hub."""
         _LOGGER.debug("Connecting to Electrolux hub")
-        self._client = OneAppApi(self._email, self._password, self._country_code, logger=_LOGGER)
+        token_manager = TokenManager(
+            access_token=self._entry.data["access_token"],
+            refresh_token=self._entry.data["refresh_token"],
+            api_key=self._entry.data["api_key"],
+            on_token_update=self._persist_tokens,
+        )
+        self._client = ApplianceClient(token_manager=token_manager)
         self.online = True
 
     async def disconnect(self):
@@ -59,8 +78,6 @@ class Hub:
         if self._update_task is not None:
             self._update_task.cancel()
             self._update_task = None
-        if self._client is not None:
-            await self._client.close()
         self._client = None
         self.online = False
 

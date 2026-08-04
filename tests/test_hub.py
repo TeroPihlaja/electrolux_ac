@@ -3,29 +3,57 @@ import pytest
 from custom_components.electrolux_ac.hub import Hub, Appliance
 
 
-def make_hub(hass=None, country_code="fi"):
+def make_entry(data=None):
+    entry = MagicMock()
+    entry.data = data or {
+        "api_key": "test_api_key",
+        "access_token": "test_access_token",
+        "refresh_token": "test_refresh_token",
+    }
+    entry.entry_id = "test_entry_id"
+    return entry
+
+
+def make_hub(hass=None, entry=None):
     hass = hass or MagicMock()
-    return Hub(hass, "test@example.com", "secret", country_code)
+    entry = entry or make_entry()
+    return Hub(hass, entry)
 
 
 @pytest.mark.asyncio
-async def test_hub_passes_country_code_to_api():
-    hub = make_hub(country_code="de")
-    with patch("custom_components.electrolux_ac.hub.OneAppApi") as mock_api_cls:
-        mock_api_cls.return_value = MagicMock()
+async def test_connect_builds_client_with_entry_credentials():
+    entry = make_entry()
+    hub = make_hub(entry=entry)
+    with patch("custom_components.electrolux_ac.hub.TokenManager") as mock_tm_cls, \
+         patch("custom_components.electrolux_ac.hub.ApplianceClient") as mock_client_cls:
         await hub.connect()
-    args, _ = mock_api_cls.call_args
-    assert args[2] == "de"
+    _, kwargs = mock_tm_cls.call_args
+    assert kwargs["access_token"] == "test_access_token"
+    assert kwargs["refresh_token"] == "test_refresh_token"
+    assert kwargs["api_key"] == "test_api_key"
+    mock_client_cls.assert_called_once_with(token_manager=mock_tm_cls.return_value)
+    assert hub.online is True
 
 
 @pytest.mark.asyncio
-async def test_hub_defaults_country_code_fi():
-    hub = Hub(MagicMock(), "test@example.com", "secret", "fi")
-    with patch("custom_components.electrolux_ac.hub.OneAppApi") as mock_api_cls:
-        mock_api_cls.return_value = MagicMock()
+async def test_connect_persists_rotated_tokens_via_on_token_update():
+    entry = make_entry()
+    hass = MagicMock()
+    hub = make_hub(hass=hass, entry=entry)
+    with patch("custom_components.electrolux_ac.hub.TokenManager") as mock_tm_cls, \
+         patch("custom_components.electrolux_ac.hub.ApplianceClient"):
         await hub.connect()
-    args, _ = mock_api_cls.call_args
-    assert args[2] == "fi"
+    _, kwargs = mock_tm_cls.call_args
+    on_token_update = kwargs["on_token_update"]
+    on_token_update("new_access", "new_refresh", "test_api_key")
+    hass.config_entries.async_update_entry.assert_called_once_with(
+        entry,
+        data={
+            "api_key": "test_api_key",
+            "access_token": "new_access",
+            "refresh_token": "new_refresh",
+        },
+    )
 
 
 def make_appliance(connected=True):
