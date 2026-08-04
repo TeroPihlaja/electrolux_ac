@@ -3,11 +3,20 @@
     "step": {
       "user": {
         "title": "Login information",
-        "description": "Please enter your login information. This is the same information you use to log in to the Electrolux mobile app.",
+        "description": "Generate an API key, access token, and refresh token at https://developer.electrolux.one/ (log in with your existing Electrolux account, create an API key, then generate a token pair).",
         "data": {
-          "email": "Email address",
-          "password": "Password",
-          "country_code": "Country code (2 letters, e.g. fi, us, de)"
+          "api_key": "API key",
+          "access_token": "Access token",
+          "refresh_token": "Refresh token"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Electrolux AC",
+        "description": "Your Electrolux credentials are no longer valid. Generate a fresh API key, access token, and refresh token at https://developer.electrolux.one/ and enter them below.",
+        "data": {
+          "api_key": "API key",
+          "access_token": "Access token",
+          "refresh_token": "Refresh token"
         }
       }
     },
@@ -17,7 +26,8 @@
       "unknown": "[%key:common::config_flow::error::unknown%]"
     },
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]",
+      "reauth_successful": "[%key:common::config_flow::abort::reauth_successful%]"
     }
   }
 }
