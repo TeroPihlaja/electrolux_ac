@@ -18,7 +18,7 @@ If `.venv` doesn't exist:
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements_test.txt
-.venv/bin/pip install "git+https://github.com/TeroPihlaja/py-electrolux-ocp.git@v0.1.4-teropihlaja1"
+.venv/bin/pip install electrolux-group-developer-sdk==0.6.1
 ```
 
 ## Key files
@@ -31,17 +31,8 @@ python3 -m venv .venv
 ## Device
 
 Electrolux COMFORT600 portable AC (model `AZUL`, deviceType `PORTABLE_AIR_CONDITIONER`).
-API: Electrolux OneApp OCP via `pyelectroluxocp`, pinned to a patched fork ([TeroPihlaja/py-electrolux-ocp](https://github.com/TeroPihlaja/py-electrolux-ocp)) since upstream is archived — see `manifest.json`.
-Live state arrives via WebSocket; initial state polled on setup.
-
-Home Assistant's dependency check for a `name @ git+url` requirement only looks
-at the package name, not the URL — so bumping the fork's tag in `manifest.json`
-alone will NOT trigger a reinstall if any version of `pyelectroluxocp` is
-already present. After updating the fork, force it on the server with:
-```bash
-docker exec homeassistant python3 -m pip install --force-reinstall --no-deps "pyelectroluxocp @ git+https://github.com/TeroPihlaja/py-electrolux-ocp.git@<tag>"
-docker restart homeassistant
-```
+API: [Electrolux Developer Portal API](https://developer.electrolux.one/) via `electrolux-group-developer-sdk` (official, PyPI). Requires an API key + access/refresh token pair generated manually via the developer portal (log in with your Electrolux account, create an API key, generate tokens) — see `config_flow.py`.
+Live state arrives via Server-Sent Events (SSE); a 10-minute safety-net poll (`coordinator.py`) additionally verifies credentials and re-fetches full state.
 
 ## Releasing
 
