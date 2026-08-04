@@ -18,7 +18,7 @@ If `.venv` doesn't exist:
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements_test.txt
-.venv/bin/pip install pyelectroluxocp
+.venv/bin/pip install "git+https://github.com/TeroPihlaja/py-electrolux-ocp.git@v0.1.3-teropihlaja1"
 ```
 
 ## Key files
@@ -31,7 +31,7 @@ python3 -m venv .venv
 ## Device
 
 Electrolux COMFORT600 portable AC (model `AZUL`, deviceType `PORTABLE_AIR_CONDITIONER`).
-API: Electrolux OneApp OCP via `pyelectroluxocp==0.1.3`.
+API: Electrolux OneApp OCP via `pyelectroluxocp`, pinned to a patched fork ([TeroPihlaja/py-electrolux-ocp](https://github.com/TeroPihlaja/py-electrolux-ocp)) since upstream is archived — see `manifest.json`.
 Live state arrives via WebSocket; initial state polled on setup.
 
 ## Releasing

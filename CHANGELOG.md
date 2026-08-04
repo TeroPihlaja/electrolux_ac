@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.0.3] - 2026-08-04
+
+### Added
+- `LICENSE` file (MIT) at repository root, required for HACS default catalog submission
+
+### Fixed
+- Integration could become permanently stuck offline after the Electrolux cloud account's refresh token was revoked: the underlying `pyelectroluxocp` client retried the same dead refresh token forever instead of falling back to a fresh login, and retried at a fixed 5-second interval with no backoff, which kept re-triggering Electrolux's API rate limiting indefinitely. Since `pyelectroluxocp` is archived upstream, `manifest.json` now pins a patched fork ([TeroPihlaja/py-electrolux-ocp](https://github.com/TeroPihlaja/py-electrolux-ocp)) instead of the dead PyPI release.
+
 ## [1.0.2] - 2026-06-11
 
 ### Fixed
