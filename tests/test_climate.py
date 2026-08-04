@@ -61,3 +61,18 @@ def test_temperature_unit_is_fahrenheit_when_representation_is_fahrenheit(mock_a
     mock_appliance.capabilities = {}
     climate = ElectroluxClimate(mock_appliance)
     assert climate.temperature_unit == UnitOfTemperature.FAHRENHEIT
+
+
+def test_temperature_unit_is_fahrenheit_when_representation_is_uppercase(mock_appliance):
+    mock_appliance._states = {"temperatureRepresentation": "FAHRENHEIT"}
+    mock_appliance.appliance_info = {"model": "comfort600", "brand": "electrolux"}
+    mock_appliance.capabilities = {}
+    climate = ElectroluxClimate(mock_appliance)
+    assert climate.temperature_unit == UnitOfTemperature.FAHRENHEIT
+
+
+def test_hvac_mode_is_cool_when_mode_uppercase(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["applianceState"] = "RUNNING"
+    mock_appliance._states["mode"] = "COOL"
+    assert climate.hvac_mode == HVACMode.COOL

@@ -86,3 +86,11 @@ def test_temperature_sensor_unit_defaults_to_celsius_when_representation_absent(
     mock_appliance._states = {}
     sensor = TemperatureSensor(mock_appliance)
     assert sensor.native_unit_of_measurement == UnitOfTemperature.CELSIUS
+
+
+def test_temperature_sensor_unit_is_fahrenheit_when_representation_uppercase(mock_appliance):
+    from custom_components.electrolux_ac.sensor import TemperatureSensor
+    from homeassistant.const import UnitOfTemperature
+    mock_appliance._states = {"temperatureRepresentation": "FAHRENHEIT"}
+    sensor = TemperatureSensor(mock_appliance)
+    assert sensor.native_unit_of_measurement == UnitOfTemperature.FAHRENHEIT

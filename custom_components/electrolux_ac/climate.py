@@ -47,7 +47,7 @@ async def async_setup_entry(
     except Exception:
       _LOGGER.warning("Skipping appliance %s — state not ready", appliance.appliance_id)
       continue
-    if appliance.appliance_info.get("deviceType") == "PORTABLE_AIR_CONDITIONER":
+    if (appliance.appliance_info.get("deviceType") or '').upper() == "PORTABLE_AIR_CONDITIONER":
       new_devices.append(ElectroluxClimate(appliance))
   if new_devices:
     async_add_entities(new_devices)
@@ -80,7 +80,7 @@ class ElectroluxClimate(ClimateEntity):
 
     self._attr_name = self._appliance.name
 
-    if self._appliance._states.get('temperatureRepresentation') == 'fahrenheit':
+    if (self._appliance._states.get('temperatureRepresentation') or '').lower() == 'fahrenheit':
       self._attr_unit_of_measurement = UnitOfTemperature.FAHRENHEIT
     else:
       self._attr_unit_of_measurement = UnitOfTemperature.CELSIUS
@@ -122,13 +122,14 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def fan_mode(self) -> str | None:
-    if self._appliance._states.get('fanSpeedSetting') == 'auto':
+    fan_speed = (self._appliance._states.get('fanSpeedSetting') or '').lower()
+    if fan_speed == 'auto':
       return FAN_AUTO
-    elif self._appliance._states.get('fanSpeedSetting') == 'low':
+    elif fan_speed == 'low':
       return FAN_LOW
-    elif self._appliance._states.get('fanSpeedSetting') == 'middle':
+    elif fan_speed == 'middle':
       return FAN_MEDIUM
-    elif self._appliance._states.get('fanSpeedSetting') == 'high':
+    elif fan_speed == 'high':
       return FAN_HIGH
     else:
       return None
@@ -139,13 +140,15 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def hvac_mode(self) -> HVACMode | None:
-    if self._appliance._states.get('applianceState') == 'off':
+    appliance_state = (self._appliance._states.get('applianceState') or '').lower()
+    mode = (self._appliance._states.get('mode') or '').lower()
+    if appliance_state == 'off':
       return HVACMode.OFF
-    if self._appliance._states.get('mode') == 'cool':
+    if mode == 'cool':
       return HVACMode.COOL
-    elif self._appliance._states.get('mode') == 'dry':
+    elif mode == 'dry':
       return HVACMode.DRY
-    elif self._appliance._states.get('mode') == 'fanOnly':
+    elif mode == 'fanonly':
       return HVACMode.FAN_ONLY
     else:
       return HVACMode.OFF
@@ -171,9 +174,10 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def swing_mode(self) -> str | None:
-    if self._appliance._states.get('verticalSwing') == 'off':
+    swing = (self._appliance._states.get('verticalSwing') or '').lower()
+    if swing == 'off':
       return SWING_OFF
-    elif self._appliance._states.get('verticalSwing') == 'on':
+    elif swing == 'on':
       return SWING_VERTICAL
     else:
       return None
@@ -191,7 +195,7 @@ class ElectroluxClimate(ClimateEntity):
 
   @property
   def preset_mode(self) -> str:
-    if self._appliance._states.get('sleepMode') == 'on':
+    if (self._appliance._states.get('sleepMode') or '').lower() == 'on':
       return PRESET_SLEEP
     return PRESET_NONE
 

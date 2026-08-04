@@ -29,6 +29,12 @@ def test_preset_mode_is_sleep_when_sleep_on(mock_appliance):
     assert climate.preset_mode == PRESET_SLEEP
 
 
+def test_preset_mode_is_sleep_when_sleep_on_uppercase(mock_appliance):
+    climate = _make_climate(mock_appliance)
+    mock_appliance._states["sleepMode"] = "ON"
+    assert climate.preset_mode == PRESET_SLEEP
+
+
 def test_preset_mode_is_none_when_key_missing(mock_appliance):
     climate = _make_climate(mock_appliance)
     del mock_appliance._states["sleepMode"]
