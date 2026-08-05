@@ -40,6 +40,8 @@ If Docker isn't installed/running, both scripts print a message and exit 0 (skip
 - `custom_components/electrolux_ac/climate.py` — ClimateEntity: modes, fan, swing, temperature, sleep preset
 - `custom_components/electrolux_ac/sensor.py` — TemperatureSensor + GenericSensor (filter, runtime, RSSI, compressor)
 - `custom_components/electrolux_ac/__init__.py` — async_setup_entry / async_unload_entry
+- `custom_components/electrolux_ac/config_flow.py` — UI config flow: API key/token entry, reauth
+- `custom_components/electrolux_ac/coordinator.py` — 10-minute safety-net poll (credential + connectivity checks)
 
 ## Device
 
