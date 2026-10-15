@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- An Electrolux cloud API outage (HTTP 5xx) could leave the AC permanently `unavailable` until Home Assistant was restarted. A failed state request makes the SDK return `state=None`; that blanked the appliance's last-known state, and `state_update_callback` then dropped every incoming SSE event because it had no baseline to apply it to. The last-known state is now kept when a state fetch fails, and an SSE event that arrives with no baseline now triggers a full refresh instead of being dropped.
+- The 10-minute safety-net poll only ran once, at setup. Home Assistant stops rescheduling a `DataUpdateCoordinator` that has no listeners, and nothing reads this coordinator's data, so the periodic refresh (and the credential check) never repeated. A no-op listener is now registered so the poll actually runs every 10 minutes.
+
 ## [1.2.0] - 2026-08-04
 
 ### Added

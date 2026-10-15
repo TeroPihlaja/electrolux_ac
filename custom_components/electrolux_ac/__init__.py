@@ -47,6 +47,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         await electrolux_hub.disconnect()
         raise
     electrolux_hub.coordinator = coordinator
+    # DataUpdateCoordinator only reschedules its next refresh while it has listeners. No entity
+    # reads this coordinator's data, so without one the safety-net poll would run once at setup
+    # and never again.
+    entry.async_on_unload(coordinator.async_add_listener(lambda: None))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True

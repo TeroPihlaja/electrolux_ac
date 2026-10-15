@@ -336,3 +336,93 @@ async def test_wait_for_state_returns_immediately_without_sleeping_when_already_
         await appliance.wait_for_state()
 
     assert not sleep_was_called
+
+
+@pytest.mark.asyncio
+async def test_full_refresh_keeps_last_known_state_when_state_fetch_fails():
+    """The SDK logs a warning and returns state=None when the state request fails (e.g. a 5xx
+    during an Electrolux cloud outage). Blanking the appliance then made it permanently
+    unavailable, because state_update_callback drops every SSE event while _sdk_state is None."""
+    hub = make_hub()
+    hub.online = True
+    hub._client = AsyncMock()
+    hub._client.get_appliance_data.return_value = [_make_appliance_data()]
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future", side_effect=lambda c: c.close()):
+        await hub.discover_appliances()
+    appliance = hub.appliances[0]
+    known_sdk_state = appliance._sdk_state
+
+    failed = _make_appliance_data()
+    failed.state = None
+    hub._client.get_appliance_data.return_value = [failed]
+    await hub.full_refresh()
+
+    assert appliance._sdk_state is known_sdk_state
+    assert appliance._states == {"mode": "COOL", "ambientTemperatureC": 22}
+    assert appliance._connected is True
+
+
+@pytest.mark.asyncio
+async def test_full_refresh_still_applies_a_successful_state_after_a_failed_one():
+    hub = make_hub()
+    hub.online = True
+    hub._client = AsyncMock()
+    hub._client.get_appliance_data.return_value = [_make_appliance_data()]
+    with patch("custom_components.electrolux_ac.hub.asyncio.ensure_future", side_effect=lambda c: c.close()):
+        await hub.discover_appliances()
+    appliance = hub.appliances[0]
+
+    failed = _make_appliance_data()
+    failed.state = None
+    hub._client.get_appliance_data.return_value = [failed]
+    await hub.full_refresh()
+
+    recovered = _make_appliance_data(connection_state="disconnected")
+    recovered.state.properties = {"reported": {"mode": "FAN", "ambientTemperatureC": 25}}
+    hub._client.get_appliance_data.return_value = [recovered]
+    await hub.full_refresh()
+
+    assert appliance._states == {"mode": "FAN", "ambientTemperatureC": 25}
+    assert appliance._connected is False
+
+
+def test_state_update_callback_requests_a_refresh_when_there_is_no_baseline_state():
+    """An SSE delta can't be applied without a baseline; rather than dropping it silently,
+    ask the hub for a full refresh."""
+    hub = MagicMock()
+    appliance = Appliance("test_id", "Test AC", hub)
+    assert appliance._sdk_state is None
+
+    appliance.state_update_callback({"applianceId": "test_id", "property": "ambientTemperatureC", "value": 22})
+
+    hub.schedule_refresh.assert_called_once_with()
+    assert appliance._states == {}
+
+
+@pytest.mark.asyncio
+async def test_schedule_refresh_runs_one_full_refresh_at_a_time_and_swallows_failures():
+    import asyncio
+    hass = MagicMock()
+    hass.async_create_task.side_effect = lambda coro: asyncio.ensure_future(coro)
+    hub = make_hub(hass=hass)
+    release = asyncio.Event()
+    calls = []
+
+    async def slow_refresh():
+        calls.append(1)
+        await release.wait()
+        raise RuntimeError("API still down")
+
+    hub.full_refresh = slow_refresh
+    hub.schedule_refresh()
+    hub.schedule_refresh()  # a refresh is already in flight
+    await asyncio.sleep(0)
+    assert calls == [1]
+
+    release.set()
+    await hub._refresh_task  # must not raise: failures are logged, not propagated
+    hub.schedule_refresh()  # allowed again once the previous one finished
+    await asyncio.sleep(0)
+    assert calls == [1, 1]
+    release.set()
+    await hub._refresh_task
