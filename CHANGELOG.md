@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.1] - 2026-10-15
 
 ### Fixed
 - An Electrolux cloud API outage (HTTP 5xx) could leave the AC permanently `unavailable` until Home Assistant was restarted. A failed state request makes the SDK return `state=None`; that blanked the appliance's last-known state, and `state_update_callback` then dropped every incoming SSE event because it had no baseline to apply it to. The last-known state is now kept when a state fetch fails, and an SSE event that arrives with no baseline now triggers a full refresh instead of being dropped.
