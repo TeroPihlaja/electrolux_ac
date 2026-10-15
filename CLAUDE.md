@@ -49,6 +49,11 @@ Electrolux COMFORT600 portable AC (model `AZUL`, deviceType `PORTABLE_AIR_CONDIT
 API: [Electrolux Developer Portal API](https://developer.electrolux.one/) via `electrolux-group-developer-sdk` (official, PyPI). Requires an API key + access/refresh token pair generated manually via the developer portal (log in with your Electrolux account, create an API key, generate tokens) — see `config_flow.py`.
 Live state arrives via Server-Sent Events (SSE); a 10-minute safety-net poll (`coordinator.py`) additionally verifies credentials and re-fetches full state.
 
+## Gotchas
+
+- The SDK's `get_appliance_data()` only logs a warning and returns `state=None` when a state request fails (e.g. a 5xx during an Electrolux cloud outage). `Hub._apply_appliance_data` must keep the last-known state in that case: blanking it makes the entity unavailable, and `Appliance.state_update_callback` then has no baseline to apply SSE events to.
+- Home Assistant only reschedules a `DataUpdateCoordinator` while it has listeners, and no entity reads `ElectroluxSafetyNetCoordinator`. `__init__.py` registers a no-op listener for that reason. Don't remove it, or the 10-minute poll runs once at setup and never again.
+
 ## Releasing
 
 When creating a release:
