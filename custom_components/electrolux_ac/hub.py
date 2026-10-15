@@ -31,6 +31,7 @@ class Hub:
         self.appliances = None
         self.online = False
         self._update_task = None
+        self._refresh_task = None
         self.coordinator = None
 
     @property
@@ -102,6 +103,15 @@ class Hub:
                 "brand": data.details.applianceInfo.brand,
                 "deviceType": data.details.applianceInfo.deviceType,
             }
+        if data.state is None and appliance._sdk_state is not None:
+            # The SDK only logs a warning and returns state=None when the state request fails
+            # (e.g. a 5xx during an Electrolux cloud outage). Keep the last-known state:
+            # blanking it marked the entity unavailable, and state_update_callback then dropped
+            # every SSE event because it had no baseline - until the next restart.
+            _LOGGER.debug(
+                "State fetch failed for %s; keeping last-known state", appliance.appliance_id
+            )
+            return
         appliance._sdk_state = data.state
         appliance._states = (
             data.state.properties.get("reported", {}) if data.state else {}
@@ -129,6 +139,22 @@ class Hub:
             if data is not None:
                 self._apply_appliance_data(appliance, data)
                 appliance.publish_updates()
+
+    def schedule_refresh(self) -> None:
+        """Request a full refresh in the background, one at a time.
+
+        Used when an SSE event arrives for an appliance that has no baseline state to apply
+        it to. Failures are logged, not raised: the next event will ask again.
+        """
+        if self._refresh_task is not None and not self._refresh_task.done():
+            return
+        self._refresh_task = self._hass.async_create_task(self._refresh_quietly())
+
+    async def _refresh_quietly(self) -> None:
+        try:
+            await self.full_refresh()
+        except Exception as ex:  # noqa: BLE001 - best-effort recovery, retried on the next event
+            _LOGGER.warning("Background refresh of Electrolux appliance data failed: %s", ex)
 
     async def test_connection(self) -> None:
         """Verify credentials are valid. Raises BadCredentialsException if not."""
@@ -173,6 +199,9 @@ class Appliance:
         """Handle a single SSE property-update event for this appliance."""
         _LOGGER.debug("appliance state event: %s", json.dumps(event))
         if self._sdk_state is None:
+            # No baseline to apply this delta to. Ask for a full refresh instead of dropping
+            # it, otherwise the appliance stays blank until the next restart.
+            self.hub.schedule_refresh()
             return
         self._sdk_state = apply_sse_update(self._sdk_state, event)
         self._states = self._sdk_state.properties.get("reported", {})

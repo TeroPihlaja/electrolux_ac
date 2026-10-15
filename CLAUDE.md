@@ -40,12 +40,19 @@ If Docker isn't installed/running, both scripts print a message and exit 0 (skip
 - `custom_components/electrolux_ac/climate.py` — ClimateEntity: modes, fan, swing, temperature, sleep preset
 - `custom_components/electrolux_ac/sensor.py` — TemperatureSensor + GenericSensor (filter, runtime, RSSI, compressor)
 - `custom_components/electrolux_ac/__init__.py` — async_setup_entry / async_unload_entry
+- `custom_components/electrolux_ac/config_flow.py` — UI config flow: API key/token entry, reauth
+- `custom_components/electrolux_ac/coordinator.py` — 10-minute safety-net poll (credential + connectivity checks)
 
 ## Device
 
 Electrolux COMFORT600 portable AC (model `AZUL`, deviceType `PORTABLE_AIR_CONDITIONER`).
 API: [Electrolux Developer Portal API](https://developer.electrolux.one/) via `electrolux-group-developer-sdk` (official, PyPI). Requires an API key + access/refresh token pair generated manually via the developer portal (log in with your Electrolux account, create an API key, generate tokens) — see `config_flow.py`.
 Live state arrives via Server-Sent Events (SSE); a 10-minute safety-net poll (`coordinator.py`) additionally verifies credentials and re-fetches full state.
+
+## Gotchas
+
+- The SDK's `get_appliance_data()` only logs a warning and returns `state=None` when a state request fails (e.g. a 5xx during an Electrolux cloud outage). `Hub._apply_appliance_data` must keep the last-known state in that case: blanking it makes the entity unavailable, and `Appliance.state_update_callback` then has no baseline to apply SSE events to.
+- Home Assistant only reschedules a `DataUpdateCoordinator` while it has listeners, and no entity reads `ElectroluxSafetyNetCoordinator`. `__init__.py` registers a no-op listener for that reason. Don't remove it, or the 10-minute poll runs once at setup and never again.
 
 ## Releasing
 

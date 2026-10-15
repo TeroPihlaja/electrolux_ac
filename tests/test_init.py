@@ -52,3 +52,28 @@ async def test_unload_entry_unloads_platforms_before_disconnecting_hub():
     assert result is True
     assert call_order == ["unload_platforms", "coordinator_shutdown", "hub_disconnect"]
     assert "test_entry_id" not in hass.data[DOMAIN]
+
+
+@pytest.mark.asyncio
+async def test_setup_entry_registers_a_coordinator_listener_so_the_safety_net_keeps_polling():
+    """DataUpdateCoordinator only reschedules its next refresh while it has listeners. No
+    entity reads this coordinator, so without one the '10-minute safety net' ran once at
+    setup and never again."""
+    hass = MagicMock()
+    hass.data = {}
+    hass.config_entries.async_forward_entry_setups = AsyncMock()
+    entry = MagicMock()
+    entry.entry_id = "test_entry_id"
+
+    with patch("custom_components.electrolux_ac.hub.Hub") as mock_hub_cls, \
+         patch("custom_components.electrolux_ac.ElectroluxSafetyNetCoordinator") as mock_coord_cls:
+        mock_hub = mock_hub_cls.return_value
+        mock_hub.test_connection = AsyncMock()
+        mock_hub.discover_appliances = AsyncMock()
+        coordinator = mock_coord_cls.return_value
+        coordinator.async_config_entry_first_refresh = AsyncMock()
+
+        assert await async_setup_entry(hass, entry) is True
+
+    coordinator.async_add_listener.assert_called_once()
+    entry.async_on_unload.assert_called_once_with(coordinator.async_add_listener.return_value)
