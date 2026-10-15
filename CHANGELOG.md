@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+- `hacs.json` now declares `"homeassistant": "2024.11.0"` as the minimum Home Assistant version, and the README requirement was corrected from 2024.1. The config flow uses `_get_reauth_entry()` and `async_update_reload_and_abort(..., data_updates=...)` (2024.11), and the coordinator passes `config_entry=` (2024.8), so older cores failed at setup.
+
+### Removed
+- `icon.png` and `icon@2x.png` at the component root: byte-identical duplicates of the ones in `brand/`, which is the only place they are read.
+
 ## [1.2.1] - 2026-10-15
 
 ### Fixed

@@ -24,7 +24,7 @@ Control and monitor your Electrolux portable air conditioner from Home Assistant
 
 ## Requirements
 
-- Home Assistant 2024.1 or newer
+- Home Assistant 2024.11 or newer
 - An API key and access/refresh token pair from the [Electrolux Developer Portal](https://developer.electrolux.one/) (log in with your Electrolux account, create an API key, then generate a token pair)
 - Supported device: tested on Electrolux COMFORT600 portable AC. Other Electrolux portable AC models exposed by the API as `PORTABLE_AIR_CONDITIONER` should work too, since the integration doesn't check the specific model — untested, so please report back if you try one
 
